@@ -1,4 +1,7 @@
 outputs
 cache
 *.xlsx
+*.xls
+*.ods
 *.svg
+*.pdf
