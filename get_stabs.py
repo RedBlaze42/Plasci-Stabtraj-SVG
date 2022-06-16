@@ -29,23 +29,40 @@ def get_project_details(project_id):
     try:
         rce3_msg = soup.select(".border-rce3")
         stabratjs = soup.find("h3", text="StabTraj's").parent.findAll("a")
+        last_stab = sorted((stab for stab in stabratjs), key=lambda x: int(x["href"].split("=")[-1]) if x["href"] != "#" else 0, reverse=True)[0]
+        last_stab_text = last_stab.parent.parent.select_one(".project-document-filename").text
+        
         output = {
             "project_name": soup.find("input", {"id": "project__name"})["value"],
             "club_name": soup.find("select", {"id": "project__club"}).find("option", {"selected": True}).text,
-            "stabtraj_url": "https://www.planete-sciences.org/" + sorted((stab["href"] for stab in stabratjs), key=lambda x: int(x.split("=")[-1]) if x != "#" else 0, reverse=True)[0],
+            "stabtraj_url": "https://www.planete-sciences.org/" + last_stab["href"],
             "project_id": int(project_id),
             "rce3": rce3_msg[-1].text if len(rce3_msg) > 0  else None
         }
         output["stabtraj_id"] = int(output['stabtraj_url'].split('=')[-1])
         
-        stab_path = get_path_from_id(output["stabtraj_id"])
+        stab_path = Path("cache")/Path(f"{project_id}_{last_stab_text.replace(' ', '')}")
         if not stab_path.exists():
             with open(stab_path, "wb") as f:
                 stab_req = session.get(output["stabtraj_url"])
                 stab_req.raise_for_status()
                 f.write(stab_req.content)
-    except AttributeError:
-        return None
+            
+            if str(stab_path).endswith(".xlsx"):
+                temp_path = str(stab_path).replace(".xlsx", "_temp.xlsx")
+                os.rename(stab_path, temp_path)
+                new_path = str(stab_path.absolute())
+                stab_path = Path(temp_path)
+            else:
+                new_path = str(stab_path.absolute())+"x"
+            
+            os.system(f"convert.vbs \"{stab_path.absolute()}\" \"{new_path}\"")
+            
+    #except AttributeError as e:
+    #    print(e)
+    #    return None
+    finally:
+        pass
 
     return output
 
