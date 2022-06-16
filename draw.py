@@ -18,6 +18,16 @@ chart_series = {
     "canard2": {"type": "line", "color": "red"}
 }
 
+usual_distribution = {
+    0: "fuselage",
+    1: "aileron",
+    2: "fuselage2",
+    3: "aileron2",
+    6: "canard",
+    7: "canard2",
+    12: "Cone",
+    13: "Cone1"
+}
 
 class StabDrawing():
     
@@ -28,11 +38,18 @@ class StabDrawing():
         self.stroke_width = 3
         
         self.series = dict()
-        for serie in self.sheet._charts[0].series:
-            if serie.title.value in chart_series:
+        for i, serie in enumerate(self.sheet._charts[0].series):
+            serie_title = None
+            if serie.title is None:
+                if i in usual_distribution:
+                    serie_title = usual_distribution[i]            
+            elif serie.title.value in chart_series:
+                serie_title = serie.title.value.lower()
+            
+            if serie_title is not None:
                 x_points = self.range_reduce(serie.xVal.numRef.f)
                 y_points = self.range_reduce(serie.yVal.numRef.f)
-                self.series[serie.title.value.lower()] = list(zip(x_points, y_points))
+                self.series[serie_title] = list(zip(x_points, y_points))
                 
         if len(self.series) == 0:
             raise Exception("No series")
@@ -92,4 +109,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-    #StabDrawing("cache/432_stabtraj_v3-4.2-2 Beyond.xlsx", 2000,6000).draw("test3.csv")
+    #StabDrawing("cache/532_StabtrajOgma.xlsx", 2000,6000).draw("test3.svg")
+    #StabDrawing("cache/488_StabTraj-Irydium.xlsx", 2000,6000).draw("test1.svg")
+    #StabDrawing("cache/424_StabTraj-MF26-Leofly-Polaris.xlsx", 2000,6000).draw("test2.svg")
+    #StabDrawing("cache/390_stabtrajkuntur.xlsx", 2000,6000).draw("test4.svg")
