@@ -1,7 +1,23 @@
 import openpyxl
+import re
+from xls2xlsx import XLS2XLSX
 import drawSvg as draw
 
-chart_series = ["aileron", "aileron2", "fuselage", "fuselage2", "Cone", "Cone1"]
+range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
+
+letters = [letter for letter in "ABCDEFGHIJKLMNOPQRSTUVXYZ"]
+
+chart_series = {
+    "aileron": {"type": "line", "color": "red"},
+    "aileron2": {"type": "line", "color": "red"},
+    "fuselage": {"type": "line", "color": "red"},
+    "fuselage2": {"type": "line", "color": "red"},
+    "Cone": {"type": "line", "color": "red"},
+    "Cone1": {"type": "line", "color": "red"},
+    "canard": {"type": "line", "color": "red"},
+    "canard2": {"type": "line", "color": "red"}
+}
+
 
 class StabDrawing():
     
@@ -10,33 +26,36 @@ class StabDrawing():
         self.sheet = book["Stabilito"]
         self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
         self.stroke_width = 3
-        self.offset = (0, 0)
         
-        self.series = list()
+        self.series = dict()
         for serie in self.sheet._charts[0].series:
             if serie.title.value in chart_series:
-                self.series.append((serie.title.value, serie.xVal.numRef.f, serie.yVal.numRef.f))
-        
-        print(self.series)
-        
-    def offset_points(self, points):
-        letters = "ABCDEFGHIJKLMNOPQRSTUVXYZ"
-        output = list()
-        for point in points:
-            point_export = list()
-            for coord in point:
-                x = letters[letters.index(coord[0])+self.offset[0]]
-                y = int(coord[1:])+self.offset[1]
-                point_export.append(f"{x}{y}")
-            output.append(point_export)
-            
-        return output
+                x_points = self.range_reduce(serie.xVal.numRef.f)
+                y_points = self.range_reduce(serie.yVal.numRef.f)
+                self.series[serie.title.value.lower()] = list(zip(x_points, y_points))
+                
+        if len(self.series) == 0:
+            raise Exception("No series")
+                
+    def range_reduce(self, a1_range):
+        result = re.findall(range_regex, a1_range)[0]
+        x1, y1 = self.a1_to_xy(f"{result[0]}{result[1]}")
+        x2, y2 = self.a1_to_xy(f"{result[2]}{result[3]}")
+        points = [self.xy_to_a1(x, y) for x in range(x1, x2+1) for y in range(y1, y2+1)]
+        return list(points)
+    
+    def xy_to_a1(self, x, y):
+        return f"{letters[x]}{y}"
+    
+    def a1_to_xy(self, a1):
+        x = letters.index(a1[0])
+        y = int(a1[1:])
+        return x, y
         
     def get_points(self, points):
-        points = self.offset_points(points)
         output = list()
         for x, y in points:
-            output.append((self.sheet[y].value, self.sheet[x].value))
+            output.append((self.sheet[x].value, self.sheet[y].value))
             
         return output
 
@@ -51,62 +70,8 @@ class StabDrawing():
             self.d.append(draw.Arc(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
         
     def draw(self, path):
-        fin_coords = [
-            ["C133", "D133"],
-            ["C134", "D134"],
-            ["C135", "D135"],
-            ["C136", "D136"],
-            ["C137", "D137"]
-        ]
-        fin2_coords = [
-            ["C133", "E133"],
-            ["C134", "E134"],
-            ["C135", "E135"],
-            ["C136", "E136"],
-            ["C137", "E137"]
-        ]
-        tube_coords = [
-            ["C132", "E132"],
-            ["C131", "E131"],
-            ["C130", "E130"],
-            ["C129", "E129"],
-            ["C128", "E128"],
-            ["C127", "E127"],
-            ["C126", "E126"],
-        ]
-        tube2_coords = [
-            ["C132", "D132"],
-            ["C131", "D131"],
-            ["C130", "D130"],
-            ["C129", "D129"],
-            ["C128", "D128"],
-            ["C127", "D127"],
-            ["C126", "D126"],
-            ["C126", "D126"],
-        ]
-        fairing_coords = [
-            ["C179", "D179"],
-            ["C178", "D178"],
-            ["C177", "D177"],
-            ["C176", "D176"],
-            ["C175", "D175"],
-            ["C174", "D174"],
-        ]
-        fairing2_coords = [
-            ["C179", "E179"],
-            ["C178", "E178"],
-            ["C177", "E177"],
-            ["C176", "E176"],
-            ["C175", "E175"],
-            ["C174", "E174"],
-        ]
-        
-        self.draw_lines(fin_coords)
-        self.draw_lines(fin2_coords)
-        self.draw_lines(tube_coords)
-        self.draw_lines(tube2_coords)
-        self.draw_lines(fairing_coords)
-        self.draw_lines(fairing2_coords)
+        for serie in self.series.values():
+            self.draw_lines(serie)
         self.d.saveSvg(path)
 
 def main():
@@ -115,11 +80,16 @@ def main():
     import os
     from pathlib import Path
     os.makedirs("outputs", exist_ok=True)
-    for file in tqdm(glob("cache/*.xlsx")):
-        StabDrawing(file, 2000, 6000).draw(f"outputs/{Path(file).stem}")
+    files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
+    for file in tqdm(files):
+        try:
+            StabDrawing(Path(file), 2000, 6000).draw(f"outputs/{Path(file).stem}.svg")
+        except Exception as e:
+            print(f"Error on file {file}: {e}")
+        finally:
+            pass
     
 
 if __name__ == '__main__':
-    #main()
-    #StabDrawing("cache/2644.xlsx", 600, 1300).draw("test.svg")
-    StabDrawing("cache/2237.xlsx", 2000, 6000).draw("test2.svg")
+    main()
+    #StabDrawing("cache/432_stabtraj_v3-4.2-2 Beyond.xlsx", 2000,6000).draw("test3.csv")
