@@ -79,10 +79,6 @@ class StabDrawing():
         for i in range(1, len(points)):
             self.d.append(draw.Line(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
 
-    def draw_arcs(self, points):
-        for i in range(1, len(points)):
-            self.d.append(draw.Arc(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
-        
     def draw(self, path):
         polygons = [self.get_points(serie) for serie in self.series.values()]
         for polygon in polygons:
