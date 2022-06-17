@@ -151,7 +151,7 @@ def main():
         except Exception as e:
             print(f"Error on file {file}: {e}")
         finally:
-            pass
+            pass # Présent pour pouvoir facilement commenter la gestion des erreurs
 
 def distance(point1, point2):
     return sqrt(pow(point1[0]-point2[0], 2) + pow(point1[1]-point2[1], 2))
