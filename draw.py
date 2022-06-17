@@ -1,6 +1,5 @@
 import openpyxl
 import re
-from xls2xlsx import XLS2XLSX
 import drawSvg as draw
 
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
