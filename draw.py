@@ -77,18 +77,17 @@ class StabDrawing():
         return output
 
     def draw_lines(self, points):
-        points = self.get_points(points)
         for i in range(1, len(points)):
             self.d.append(draw.Line(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
 
     def draw_arcs(self, points):
-        points = self.get_points(points)
         for i in range(1, len(points)):
             self.d.append(draw.Arc(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
         
     def draw(self, path):
-        for serie in self.series.values():
-            self.draw_lines(serie)
+        polygons = [self.get_points(serie) for serie in self.series.values()]
+        for polygon in polygons:
+            self.draw_lines(polygon)
         self.d.saveSvg(path)
 
 def main():
