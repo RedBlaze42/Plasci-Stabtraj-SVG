@@ -75,7 +75,7 @@ class StabDrawing():
             
         return output
 
-    def draw_lines(self, points):
+    def draw_polygon(self, points):
         for i in range(1, len(points)):
             self.d.append(draw.Line(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
 
@@ -86,7 +86,7 @@ class StabDrawing():
     def draw(self, path):
         polygons = [self.get_points(serie) for serie in self.series.values()]
         for polygon in polygons:
-            self.draw_lines(polygon)
+            self.draw_polygon(polygon)
         self.d.saveSvg(path)
 
 def main():
