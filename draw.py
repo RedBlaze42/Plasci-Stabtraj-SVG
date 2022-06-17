@@ -1,21 +1,32 @@
 import openpyxl
+import pyclipper
 import re
 import drawSvg as draw
+from math import sqrt, pow
 
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
 
 letters = [letter for letter in "ABCDEFGHIJKLMNOPQRSTUVXYZ"]
 
-chart_series = {
-    "aileron": {"type": "line", "color": "red"},
-    "aileron2": {"type": "line", "color": "red"},
-    "fuselage": {"type": "line", "color": "red"},
-    "fuselage2": {"type": "line", "color": "red"},
-    "Cone": {"type": "line", "color": "red"},
-    "Cone1": {"type": "line", "color": "red"},
-    "canard": {"type": "line", "color": "red"},
-    "canard2": {"type": "line", "color": "red"}
-}
+chart_series = [
+    "aileron",
+    "aileron2",
+    "fuselage",
+    "fuselage2",
+    "Cone",
+    "Cone1",
+    "canard",
+    "canard2"
+]
+
+fins_series = [
+    "aileron",
+    "aileron2",
+    "canard",
+    "canard2"
+]
+
+fin_body_contacts = [0, 3, 4]
 
 usual_distribution = {
     0: "fuselage",
@@ -80,10 +91,52 @@ class StabDrawing():
             self.d.append(draw.Line(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
 
     def draw(self, path):
-        polygons = [self.get_points(serie) for serie in self.series.values()]
-        for polygon in polygons:
-            self.draw_polygon(polygon)
+        series_polys = dict()
+        for serie_name, serie_points in self.series.items():
+            points = self.get_points(serie_points)
+            if serie_name.lower() in ["cone", "cone1"]:
+                points.append((0, points[-1][1]))
+            series_polys[serie_name] = points
+        
+        clean_series = dict()
+        for poly_name, polygon in series_polys.items():
+            clean_poly = self.clean_polygon(polygon)
+            if clean_poly is not None:
+                clean_series[poly_name] = clean_poly
+        series_polys = clean_series
+            
+        radius = series_polys["fuselage"][1][0]    
+        for fins_serie in fins_series:
+            if fins_serie not in series_polys: continue
+            sign = 1 if series_polys[fins_serie][2][0] > 0 else -1
+            for contact_index in fin_body_contacts:
+                series_polys[fins_serie][contact_index][0] = sign*radius
+            
+        polygons = list(series_polys.values())
+        outline = self.union(polygons)
+        if len(outline) != 1: raise Exception(f"Error on union")
+        self.draw_polygon(outline[0])
         self.d.saveSvg(path)
+    
+    def clean_polygon(self, points):
+        if len(points) == 0: return None 
+        origin = points[0]
+        if not any(point != origin for point in points): return None
+        polygon = [list(points[0])]
+        for i in range(1, len(points)):
+            if distance(points[i-1], points[i]) > 0:
+                polygon.append(list(points[i]))
+        return polygon            
+    
+    def union(self, polygons):
+        pc = pyclipper.Pyclipper()
+        for polygon in polygons:
+            if polygon[0] != polygon[-1]:
+                polygon.append(polygon[0])
+            pc.AddPath(polygon, pyclipper.PT_CLIP, True)
+        output = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
+        output[0].append(output[0][0])
+        return output
 
 def main():
     from glob import glob
@@ -99,11 +152,15 @@ def main():
             print(f"Error on file {file}: {e}")
         finally:
             pass
-    
+
+def distance(point1, point2):
+    return sqrt(pow(point1[0]-point2[0], 2) + pow(point1[1]-point2[1], 2))
 
 if __name__ == '__main__':
     main()
+    #StabDrawing("cache/492_Stabtraj_MS1_V4.xlsx", 2000, 6000).draw("test.svg")
     #StabDrawing("cache/532_StabtrajOgma.xlsx", 2000,6000).draw("test3.svg")
+    #StabDrawing("cache/477_stabtrajWaira.xlsx", 2000,6000).draw("test5.svg")
     #StabDrawing("cache/488_StabTraj-Irydium.xlsx", 2000,6000).draw("test1.svg")
     #StabDrawing("cache/424_StabTraj-MF26-Leofly-Polaris.xlsx", 2000,6000).draw("test2.svg")
     #StabDrawing("cache/390_stabtrajkuntur.xlsx", 2000,6000).draw("test4.svg")
