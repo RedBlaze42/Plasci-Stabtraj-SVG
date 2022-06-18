@@ -43,9 +43,13 @@ class StabDrawing():
     
     def __init__(self, path, width, height):
         book = openpyxl.load_workbook(path, data_only=True)
-        self.sheet = book["Stabilito"]
+        try:
+            self.sheet = book["Stabilito"]
+        except KeyError:
+            self.sheet = book["stabilito"]
         self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
         self.stroke_width = 3
+        self.path = path
         
         self.series = dict()
         for i, serie in enumerate(self.sheet._charts[0].series):
@@ -110,11 +114,14 @@ class StabDrawing():
             if fins_serie not in series_polys: continue
             sign = 1 if series_polys[fins_serie][2][0] > 0 else -1
             for contact_index in fin_body_contacts:
-                series_polys[fins_serie][contact_index][0] = sign*radius
-            
+                if len(series_polys[fins_serie]) >= contact_index+1:
+                    series_polys[fins_serie][contact_index][0] -= sign*0.1
+                
         polygons = list(series_polys.values())
         outline = self.union(polygons)
-        if len(outline) != 1: raise Exception(f"Error on union")
+        if len(outline) != 1:
+            #raise Exception(f"Error on union")
+            print("pb union")
         self.draw_polygon(outline[0])
         self.d.saveSvg(path)
     
@@ -124,9 +131,12 @@ class StabDrawing():
         if not any(point != origin for point in points): return None
         polygon = [list(points[0])]
         for i in range(1, len(points)):
-            if distance(points[i-1], points[i]) > 0:
+            if self.distance(points[i-1], points[i]) > 0:
                 polygon.append(list(points[i]))
         return polygon            
+    
+    def distance(self, point1, point2):
+        return sqrt(pow(point1[0]-point2[0], 2) + pow(point1[1]-point2[1], 2))
     
     def union(self, polygons):
         pc = pyclipper.Pyclipper()
@@ -143,6 +153,7 @@ def main():
     from tqdm import tqdm
     import os
     from pathlib import Path
+    os.makedirs("errors", exist_ok=True)
     os.makedirs("outputs", exist_ok=True)
     files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
     for file in tqdm(files):
@@ -150,11 +161,9 @@ def main():
             StabDrawing(Path(file), 2000, 6000).draw(f"outputs/{Path(file).stem}.svg")
         except Exception as e:
             print(f"Error on file {file}: {e}")
+            os.rename(file, Path("errors")/Path(file).name)
         finally:
             pass # Présent pour pouvoir facilement commenter la gestion des erreurs
-
-def distance(point1, point2):
-    return sqrt(pow(point1[0]-point2[0], 2) + pow(point1[1]-point2[1], 2))
 
 if __name__ == '__main__':
     main()
