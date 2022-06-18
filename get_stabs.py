@@ -33,6 +33,8 @@ def get_project_details(project_id):
     req.raise_for_status()
     soup = BeautifulSoup(req.text, features="lxml")
     try:
+        if soup.find("select", {"id": "project__campaign"}).find("option", {"selected": True}).text != config["campaign"]: return "Invalid campaign"
+        
         rce3_msg = soup.select(".border-rce3")
         stabratjs = soup.find("h3", text="StabTraj's").parent.findAll("a")
         last_stab = sorted((stab for stab in stabratjs), key=lambda x: int(x["href"].split("=")[-1]) if x["href"] != "#" else 0, reverse=True)[0]
@@ -65,9 +67,9 @@ def get_project_details(project_id):
             os.system(f"convert.vbs \"{stab_path.absolute()}\" \"{new_path}\"")
             os.rename(stab_path.absolute(), Path("cache/raw_files")/stab_path.name)
             
-    #except AttributeError as e:
-    #    print(e)
-    #    return None
+    except AttributeError as e:
+        print(e)
+        return None
     finally:
         pass
 
@@ -81,12 +83,14 @@ def main():
     for project in tqdm(projects):
         project_details = get_project_details(project["id"])
 
-        if project_details is not None:
-            projects_details.append(project_details)
-        else:
+        if project_details is None:
             print(f"Error on project {project['name']}")
             missing_projects.append(project)
             projects.remove(project)
+        elif project_details == "Invalid campaign":
+            continue
+        else:
+            projects_details.append(project_details)
             
     with open(Path("cache")/Path("project_list.json"), "w", encoding="utf-8") as f:
         json.dump({"project_details":projects_details, "project_list": projects, "missing_projects": missing_projects}, f, ensure_ascii=False)
