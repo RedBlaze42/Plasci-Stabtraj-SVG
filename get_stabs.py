@@ -19,7 +19,12 @@ def get_projects():
     req = session.get(url)
     req.raise_for_status()
     
-    return [project for project in req.json() if project["launch_year"] == "2022" and project["type"] in ["minif", "fusex"] and project["status"] == "wip"]
+    output = list()
+    for project in req.json():
+        if project["launch_year"] == "2022" and project["type"] in ["minif", "fusex"] and project["status"] == "wip":
+            output.append(project)
+    
+    return output
 
 def get_project_details(project_id):
     url = f"https://www.planete-sciences.org/espace/scae/edit_project&id={project_id}"
