@@ -120,8 +120,7 @@ class StabDrawing():
         polygons = list(series_polys.values())
         outline = self.union(polygons)
         if len(outline) != 1:
-            #raise Exception(f"Error on union")
-            print("pb union")
+            raise Exception(f"Error on union")
         self.draw_polygon(outline[0])
         self.d.saveSvg(path)
     
@@ -167,9 +166,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    #StabDrawing("cache/492_Stabtraj_MS1_V4.xlsx", 2000, 6000).draw("test.svg")
-    #StabDrawing("cache/532_StabtrajOgma.xlsx", 2000,6000).draw("test3.svg")
-    #StabDrawing("cache/477_stabtrajWaira.xlsx", 2000,6000).draw("test5.svg")
-    #StabDrawing("cache/488_StabTraj-Irydium.xlsx", 2000,6000).draw("test1.svg")
-    #StabDrawing("cache/424_StabTraj-MF26-Leofly-Polaris.xlsx", 2000,6000).draw("test2.svg")
-    #StabDrawing("cache/390_stabtrajkuntur.xlsx", 2000,6000).draw("test4.svg")
