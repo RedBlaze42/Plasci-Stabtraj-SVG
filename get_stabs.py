@@ -8,6 +8,7 @@ with open("config.json") as f:
     config = json.load(f)
 
 os.makedirs("cache", exist_ok=True)
+os.makedirs("cache/raw_files", exist_ok=True)
 session = requests.Session()
 session.headers = {"Cookie": config["cookies"], "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"}
     
@@ -62,6 +63,7 @@ def get_project_details(project_id):
                 new_path = str(stab_path.absolute())+"x"
             
             os.system(f"convert.vbs \"{stab_path.absolute()}\" \"{new_path}\"")
+            os.rename(stab_path.absolute(), Path("cache/raw_files")/stab_path.name)
             
     #except AttributeError as e:
     #    print(e)
