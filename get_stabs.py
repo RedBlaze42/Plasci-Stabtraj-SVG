@@ -32,21 +32,17 @@ def get_projects():
     
     return output
 
-def convert_workbook(from_path, dest_path, timeout=60):
-    start_convert = time.time()
+def convert_workbook(from_path, dest_path):
     process = Popen(f".\\convert.vbs \"{from_path}\" \"{dest_path}\"", shell=True)
     
     while process.poll() == None:
-        if time.time() - start_convert > timeout: # échec
-            os.rename(from_path, Path("errors") / Path(from_path).name)
-            print(f"Erreur de conversion sur {from_path}")
-            process.kill()
-            return False
-        else:
-            time.sleep(1)
-
-    os.rename(from_path, Path("cache/raw_files") / Path(from_path).name)
-    return True
+        time.sleep(1)
+    
+    if process.poll() != 0:
+        os.rename(from_path, Path("errors") / Path(from_path).name)
+        print(f"Erreur de conversion sur {from_path}")
+    else:
+        os.rename(from_path, Path("cache/raw_files") / Path(from_path).name)
 
 def get_project_details(project_id, converter):
     url = f"https://www.planete-sciences.org/espace/scae/edit_project&id={project_id}"
