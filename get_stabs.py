@@ -1,13 +1,18 @@
 import requests, json
-import os
+import os, time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+from subprocess import Popen
+
+max_workers = 3
 
 with open("config.json") as f:
     config = json.load(f)
 
 os.makedirs("cache", exist_ok=True)
+os.makedirs("errors", exist_ok=True)
 os.makedirs("cache/raw_files", exist_ok=True)
 session = requests.Session()
 session.headers = {"Cookie": config["cookies"], "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"}
@@ -27,11 +32,28 @@ def get_projects():
     
     return output
 
-def get_project_details(project_id):
+def convert_workbook(from_path, dest_path, timeout=60):
+    start_convert = time.time()
+    process = Popen(f".\\convert.vbs \"{from_path}\" \"{dest_path}\"", shell=True)
+    
+    while process.poll() == None:
+        if time.time() - start_convert > timeout: # échec
+            os.rename(from_path, Path("errors") / Path(from_path).name)
+            print(f"Erreur de conversion sur {from_path}")
+            process.kill()
+            return False
+        else:
+            time.sleep(1)
+
+    os.rename(from_path, Path("cache/raw_files") / Path(from_path).name)
+    return True
+
+def get_project_details(project_id, converter):
     url = f"https://www.planete-sciences.org/espace/scae/edit_project&id={project_id}"
     req = session.get(url)
     req.raise_for_status()
     soup = BeautifulSoup(req.text, features="lxml")
+    
     try:
         if soup.find("select", {"id": "project__campaign"}).find("option", {"selected": True}).text != config["campaign"]: return "Invalid campaign"
         
@@ -64,8 +86,7 @@ def get_project_details(project_id):
             else:
                 new_path = str(stab_path.absolute())+"x"
             
-            os.system(f"convert.vbs \"{stab_path.absolute()}\" \"{new_path}\"")
-            os.rename(stab_path.absolute(), Path("cache/raw_files")/stab_path.name)
+            converter.submit(convert_workbook, stab_path.absolute(), new_path)
             
     except AttributeError as e:
         print(e)
@@ -79,9 +100,10 @@ def main():
     projects = get_projects()
     projects_details = list()
     missing_projects = list()
+    converter = ThreadPoolExecutor(max_workers=max_workers)
                
     for project in tqdm(projects):
-        project_details = get_project_details(project["id"])
+        project_details = get_project_details(project["id"], converter)
 
         if project_details is None:
             print(f"Error on project {project['name']}")
@@ -91,6 +113,8 @@ def main():
             continue
         else:
             projects_details.append(project_details)
+    print("En attente des dernières conversions")
+    converter.shutdown()
             
     with open(Path("cache")/Path("project_list.json"), "w", encoding="utf-8") as f:
         json.dump({"project_details":projects_details, "project_list": projects, "missing_projects": missing_projects}, f, ensure_ascii=False)
