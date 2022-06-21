@@ -26,6 +26,11 @@ fins_series = [
     "canard2"
 ]
 
+motor_series = [
+    "fuselage",
+    "fuselage2"
+]
+
 fin_body_contacts = [0, 3, 4]
 
 usual_distribution = {
@@ -39,9 +44,28 @@ usual_distribution = {
     13: "Cone1"
 }
 
+def post_process_fins(series_polys):
+    for fins_serie in fins_series:
+        if fins_serie not in series_polys: continue
+        sign = 1 if series_polys[fins_serie][2][0] > 0 else -1
+        for contact_index in fin_body_contacts:
+            if len(series_polys[fins_serie]) >= contact_index+1:
+                series_polys[fins_serie][contact_index][0] -= sign*0.1
+    return series_polys
+
+def post_process_motor(series_polys):
+    for motor_serie in motor_series:
+        serie = series_polys[motor_serie]
+        for i in range(1, len(serie)):
+            if serie[i][1] > serie[i-1][1]:
+                serie[i][1] = serie[i-1][1]
+            
+    return series_polys
+
 class StabDrawing():
     
     def __init__(self, path, width, height):
+        self.post_process_funcs = [post_process_fins, post_process_motor]
         book = openpyxl.load_workbook(path, data_only=True)
         try:
             self.sheet = book["Stabilito"]
@@ -102,27 +126,28 @@ class StabDrawing():
                 points.append((0, points[-1][1]))
             series_polys[serie_name] = points
         
-        clean_series = dict()
-        for poly_name, polygon in series_polys.items():
-            clean_poly = self.clean_polygon(polygon)
-            if clean_poly is not None:
-                clean_series[poly_name] = clean_poly
-        series_polys = clean_series
-            
-        radius = series_polys["fuselage"][1][0]    
-        for fins_serie in fins_series:
-            if fins_serie not in series_polys: continue
-            sign = 1 if series_polys[fins_serie][2][0] > 0 else -1
-            for contact_index in fin_body_contacts:
-                if len(series_polys[fins_serie]) >= contact_index+1:
-                    series_polys[fins_serie][contact_index][0] -= sign*0.1
+        series_polys = self.clean_series(series_polys)
+        
+        for post_process_func in self.post_process_funcs:
+            series_polys = post_process_func(series_polys)
+        
+        series_polys = self.clean_series(series_polys)
                 
         polygons = list(series_polys.values())
         outline = self.union(polygons)
         if len(outline) != 1:
             raise Exception(f"Error on union")
         self.draw_polygon(outline[0])
+        
         self.d.saveSvg(path)
+    
+    def clean_series(self, series):
+        clean_series = dict()
+        for poly_name, polygon in series.items():
+            clean_poly = self.clean_polygon(polygon)
+            if clean_poly is not None:
+                clean_series[poly_name] = clean_poly
+        return clean_series
     
     def clean_polygon(self, points):
         if len(points) == 0: return None 
