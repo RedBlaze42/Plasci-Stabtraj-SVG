@@ -6,3 +6,4 @@ cache
 *.svg
 *.pdf
 *.json
+!config_example.json
