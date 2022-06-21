@@ -22,7 +22,7 @@ def get_projects():
     
     output = list()
     for project in req.json():
-        if project["launch_year"] == "2022" and project["type"] in ["minif", "fusex"] and project["status"] == "wip":
+        if int(project["launch_year"]) == int(config["launch_year"]) and project["type"] in ["minif", "fusex"] and project["status"] == "wip":
             output.append(project)
     
     return output
