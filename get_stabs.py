@@ -1,6 +1,6 @@
 import requests, json
 import os, time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from bs4 import BeautifulSoup
 from tqdm import tqdm
@@ -40,18 +40,22 @@ def convert_workbook(from_path, dest_path):
     
     if process.poll() != 0:
         os.rename(from_path, Path("errors") / Path(from_path).name)
-        print(f"Erreur de conversion sur {from_path}")
+        return False, from_path
     else:
         os.rename(from_path, Path("cache/raw_files") / Path(from_path).name)
+        return True, from_path
 
-def get_project_details(project_id, converter):
-    url = f"https://www.planete-sciences.org/espace/scae/edit_project&id={project_id}"
+def get_url_from_id(project_id):
+    return f"https://www.planete-sciences.org/espace/scae/edit_project&id={project_id}"
+
+def get_project_details(project_id):
+    url = get_url_from_id(project_id)
     req = session.get(url)
     req.raise_for_status()
     soup = BeautifulSoup(req.text, features="lxml")
     
     try:
-        if soup.find("select", {"id": "project__campaign"}).find("option", {"selected": True}).text != config["campaign"]: return "Invalid campaign"
+        if soup.find("select", {"id": "project__campaign"}).find("option", {"selected": True}).text != config["campaign"]: return "Invalid campaign", None
         
         rce3_msg = soup.select(".border-rce3")
         stabratjs = soup.find("h3", text="StabTraj's").parent.findAll("a")
@@ -82,24 +86,25 @@ def get_project_details(project_id, converter):
             else:
                 new_path = str(stab_path.absolute())+"x"
             
-            converter.submit(convert_workbook, stab_path.absolute(), new_path)
-            
+            return output, (stab_path.absolute(), new_path)
+        
     except AttributeError as e:
         print(e)
         return None
     finally:
         pass
-
-    return output
+    
+    return output, None
 
 def main():
     projects = get_projects()
     projects_details = list()
     missing_projects = list()
     converter = ThreadPoolExecutor(max_workers=max_workers)
-               
-    for project in tqdm(projects):
-        project_details = get_project_details(project["id"], converter)
+    futures = list()
+    
+    for project in tqdm(projects, desc="Téléchargement des stabtraj"):
+        project_details, converter_args = get_project_details(project["id"])
 
         if project_details is None:
             print(f"Error on project {project['name']}")
@@ -109,11 +114,30 @@ def main():
             continue
         else:
             projects_details.append(project_details)
-    print("En attente des dernières conversions")
-    converter.shutdown()
-            
+        
+        if converter_args is not None:
+            futures.append(converter.submit(convert_workbook, *converter_args))
+
+    progress_bar = tqdm(total=len(futures), desc="Conversion des stabtraj")
+    errors = list()
+    for future in as_completed(futures):
+        result = future.result()
+        if not result[0]: errors.append(result[1])
+        progress_bar.update(1)
+    progress_bar.close()
+        
     with open(Path("cache")/Path("project_list.json"), "w", encoding="utf-8") as f:
         json.dump({"project_details":projects_details, "project_list": projects, "missing_projects": missing_projects}, f, ensure_ascii=False)
+    
+    if len(missing_projects) > 0:
+        print("Erreurs de téléchargement:")
+        for error in missing_projects:
+            print(f" - {error['name']}:{get_url_from_id(error['id'])}")
+    
+    if len(errors) > 0:
+        print("Erreurs de conversion:")
+        for error in errors:
+            print(f" - {Path(error).name}")
         
 
 if __name__ == "__main__":
