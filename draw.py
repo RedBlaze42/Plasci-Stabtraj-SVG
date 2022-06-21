@@ -119,21 +119,21 @@ class StabDrawing():
             self.d.append(draw.Line(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
 
     def draw(self, path):
-        series_polys = dict()
+        self.series_polys = dict()
         for serie_name, serie_points in self.series.items():
             points = self.get_points(serie_points)
             if serie_name.lower() in ["cone", "cone1"]:
                 points.append((0, points[-1][1]))
-            series_polys[serie_name] = points
+            self.series_polys[serie_name] = points
         
-        series_polys = self.clean_series(series_polys)
+        self.series_polys = self.clean_series(self.series_polys)
         
         for post_process_func in self.post_process_funcs:
-            series_polys = post_process_func(series_polys)
+            self.series_polys = post_process_func(self.series_polys)
         
-        series_polys = self.clean_series(series_polys)
+        self.series_polys = self.clean_series(self.series_polys)
                 
-        polygons = list(series_polys.values())
+        polygons = list(self.series_polys.values())
         outline = self.union(polygons)
         if len(outline) != 1:
             raise Exception(f"Error on union")
