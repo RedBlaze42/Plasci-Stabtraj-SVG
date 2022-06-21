@@ -136,7 +136,7 @@ class StabDrawing():
         polygons = list(self.series_polys.values())
         outline = self.union(polygons)
         if len(outline) != 1:
-            raise Exception(f"Error on union")
+            raise Exception(f"Too much polygons after union")
         self.outline = outline[0]
         self.draw_polygon(self.outline)
         
@@ -190,14 +190,18 @@ def main():
     os.makedirs("errors", exist_ok=True)
     os.makedirs("outputs", exist_ok=True)
     files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
+    errors = list()
     for file in tqdm(files):
         try:
             StabDrawing(Path(file), 2000, 6000).draw(f"outputs/{Path(file).stem}.svg")
         except Exception as e:
-            print(f"Error on file {file}: {e}")
+            errors.append((file, e))
             os.rename(file, Path("errors")/Path(file).name)
         finally:
             pass # Présent pour pouvoir facilement commenter la gestion des erreurs
+        
+    for error in errors:
+        print(f" - Erreur sur le fichier {Path(error[0]).name}: ({type(error[1]).__name__}) {error[1]}")
 
 if __name__ == '__main__':
     main()
