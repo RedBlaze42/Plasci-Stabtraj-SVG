@@ -114,9 +114,9 @@ class StabDrawing():
             
         return output
 
-    def draw_polygon(self, points):
+    def draw_polygon(self, points, color="red"):
         for i in range(1, len(points)):
-            self.d.append(draw.Line(*points[i-1], *points[i], stroke="red", stroke_width=self.stroke_width))
+            self.d.append(draw.Line(*points[i-1], *points[i], stroke=color, stroke_width=self.stroke_width))
 
     def draw(self, path):
         self.series_polys = dict()
@@ -137,7 +137,10 @@ class StabDrawing():
         outline = self.union(polygons)
         if len(outline) != 1:
             raise Exception(f"Error on union")
-        self.draw_polygon(outline[0])
+        self.outline = outline[0]
+        self.draw_polygon(self.outline)
+        
+        self.draw_extras()
         
         self.d.saveSvg(path)
     
@@ -171,6 +174,13 @@ class StabDrawing():
         output = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
         output[0].append(output[0][0])
         return output
+    
+    def draw_extras(self):
+        # Fin lines
+        for fin_serie_name in fins_series:
+            if fin_serie_name not in self.series_polys: continue
+            fin_serie = self.series_polys[fin_serie_name]
+            self.draw_polygon([fin_serie[0], fin_serie[-2]], color="green")
 
 def main():
     from glob import glob
