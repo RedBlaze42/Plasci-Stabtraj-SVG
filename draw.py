@@ -2,7 +2,7 @@ import openpyxl
 import pyclipper
 import re
 import drawSvg as draw
-from csv_text import Text
+from svg_text import Text
 from math import sqrt, pow
 
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
