@@ -2,6 +2,7 @@ import openpyxl
 import pyclipper
 import re
 import drawSvg as draw
+from csv_text import Text
 from math import sqrt, pow
 
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
@@ -64,8 +65,9 @@ def post_process_motor(series_polys):
 
 class StabDrawing():
     
-    def __init__(self, path, width, height):
+    def __init__(self, path, width, height, font_path="fonts/nasalization-rg.otf"):
         self.post_process_funcs = [post_process_fins, post_process_motor]
+        self.font_path = font_path
         book = openpyxl.load_workbook(path, data_only=True)
         try:
             self.sheet = book["Stabilito"]
@@ -74,6 +76,7 @@ class StabDrawing():
         self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
         self.stroke_width = 3
         self.path = path
+        self.name = self.sheet["C8"].value
         
         self.series = dict()
         for i, serie in enumerate(self.sheet._charts[0].series):
@@ -120,7 +123,7 @@ class StabDrawing():
 
     def draw(self, path):
         self.series_polys = dict()
-        for serie_name, serie_points in self.series.items():
+        for serie_name, serie_points in self.series.items(): # TODO Ajouter dans post-process
             points = self.get_points(serie_points)
             if serie_name.lower() in ["cone", "cone1"]:
                 points.append((0, points[-1][1]))
@@ -180,7 +183,25 @@ class StabDrawing():
         for fin_serie_name in fins_series:
             if fin_serie_name not in self.series_polys: continue
             fin_serie = self.series_polys[fin_serie_name]
-            self.draw_polygon([fin_serie[0], fin_serie[-2]], color="green")
+            self.draw_polygon([fin_serie[0], fin_serie[-2]], color="lime")
+        
+        # Project name
+        base = min(point[1] for point in self.series_polys["fuselage"])
+        base_fairing = min(point[1] for point in self.series_polys["cone"])
+        text_y = -int((max(base, base_fairing) - min(base, base_fairing))/2-base_fairing)
+        min_diam = min(point[0] for point in (self.series_polys["fuselage"]+self.series_polys["fuselage2"]) if point[0] > 0)
+        
+        text = Text(self.name.upper(), min_diam*0.5, self.font_path, (0, text_y), rotate_angle=90, rotate_origin=(0, text_y))
+        text_bbox = text.get_bbox()
+        
+        #if text_bbox[3] - text_bbox[1]: # TODO Modifier la taille de police dynamiquement
+        #    text.set_font_size(min_diam*0.5)
+        #    text_bbox = text.get_bbox()
+        
+        text.offset[0] -= int(text_bbox[2]/2)
+        text.offset[1] -= int(text_bbox[3]/2)
+        text.rotation_origin = text.offset
+        text.draw(self.d)
 
 def main():
     from glob import glob
