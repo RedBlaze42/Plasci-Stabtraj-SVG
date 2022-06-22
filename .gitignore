@@ -6,4 +6,8 @@ cache
 *.svg
 *.pdf
 *.json
+__pycache__
+fonts
+*.prof
+
 !config_example.json
