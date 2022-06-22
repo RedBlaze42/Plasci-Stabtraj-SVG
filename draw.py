@@ -80,7 +80,7 @@ class StabDrawing():
             serie_title = None
             if serie.title is None:
                 if i in usual_distribution:
-                    serie_title = usual_distribution[i]            
+                    serie_title = usual_distribution[i].lower()
             elif serie.title.value in chart_series:
                 serie_title = serie.title.value.lower()
             
