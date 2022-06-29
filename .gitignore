@@ -9,5 +9,6 @@ cache
 __pycache__
 fonts
 *.prof
+tests
 
 !config_example.json
