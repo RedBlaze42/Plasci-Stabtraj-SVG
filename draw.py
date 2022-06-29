@@ -208,6 +208,7 @@ def main():
     from tqdm import tqdm
     import os
     from pathlib import Path
+    from svg2pdf import bulk_convert
     os.makedirs("errors", exist_ok=True)
     os.makedirs("outputs", exist_ok=True)
     files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
@@ -223,6 +224,8 @@ def main():
         
     for error in errors:
         print(f" - Erreur sur le fichier {Path(error[0]).name}: ({type(error[1]).__name__}) {error[1]}")
+        
+    bulk_convert("output/*.pdf", "output_rockets.pdf")
 
 if __name__ == '__main__':
     main()
