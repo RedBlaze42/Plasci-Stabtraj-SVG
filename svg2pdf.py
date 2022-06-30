@@ -14,9 +14,9 @@ def bulk_convert(from_glob, output):
     for pdf_file in glob.glob("temp/*.pdf"):
         merger.append(pdf_file)
 
-    merger.write("output.pdf")
+    merger.write(output)
     merger.close()
     shutil.rmtree("temp")
 
 if __name__ == "__main__":
-    bulk_convert("output/*.pdf", "output.pdf")
+    bulk_convert("outputs/*.svg", "output.pdf")

@@ -225,7 +225,7 @@ def main():
     for error in errors:
         print(f" - Erreur sur le fichier {Path(error[0]).name}: ({type(error[1]).__name__}) {error[1]}")
         
-    bulk_convert("output/*.pdf", "output_rockets.pdf")
+    bulk_convert("outputs/*.svg", "output_rockets.pdf")
 
 if __name__ == '__main__':
     main()
