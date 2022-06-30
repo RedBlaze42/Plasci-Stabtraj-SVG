@@ -65,7 +65,7 @@ def post_process_motor(series_polys):
 
 class StabDrawing():
     
-    def __init__(self, path, width, height, font_path="fonts/nasalization-rg.otf"):
+    def __init__(self, path, width, height, name, font_path="fonts/nasalization-rg.otf"):
         self.post_process_funcs = [post_process_fins, post_process_motor]
         self.font_path = font_path
         book = openpyxl.load_workbook(path, data_only=True)
@@ -76,7 +76,7 @@ class StabDrawing():
         self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
         self.stroke_width = 3
         self.path = path
-        self.name = self.sheet["C8"].value
+        self.name = name
         
         self.series = dict()
         for i, serie in enumerate(self.sheet._charts[0].series):
@@ -206,16 +206,20 @@ class StabDrawing():
 def main():
     from glob import glob
     from tqdm import tqdm
-    import os
+    import os, json
     from pathlib import Path
     from svg2pdf import bulk_convert
     os.makedirs("errors", exist_ok=True)
     os.makedirs("outputs", exist_ok=True)
     files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
     errors = list()
+    with open("cache/project_list.json", "r", encoding="utf-8") as f:
+        project_data = {project["id"]: project for project in json.load(f)["project_list"]}
+    
     for file in tqdm(files):
+        project = project_data[Path(file).name.split("_")[0]]
         try:
-            StabDrawing(Path(file), 2000, 6000).draw(f"outputs/{Path(file).stem}.svg")
+            StabDrawing(Path(file), 2000, 6000, project["name"]).draw(f"outputs/{Path(file).stem}.svg")
         except Exception as e:
             errors.append((file, e))
             os.rename(file, Path("errors")/Path(file).name)
