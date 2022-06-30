@@ -119,7 +119,7 @@ class StabDrawing():
 
     def draw_polygon(self, points, color="red"):
         for i in range(1, len(points)):
-            self.d.append(draw.Line(*points[i-1], *points[i], stroke=color, stroke_width=self.stroke_width))
+            self.d.append(draw.Line(*points[i-1], *points[i], stroke=color, stroke_width=self.stroke_width, fill="none"))
 
     def draw(self, path):
         self.series_polys = dict()

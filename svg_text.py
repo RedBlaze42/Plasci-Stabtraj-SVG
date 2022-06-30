@@ -19,7 +19,7 @@ class Text():
         self.kern_margin = kern_margin
         
         if path_kwargs is None:
-            self.path_kwargs = dict(stroke_width=2, stroke='lime', fill='black', fill_opacity=0.2)
+            self.path_kwargs = dict(stroke_width=2, stroke=None, fill='black')
         else:
             self.path_kwargs = path_kwargs
         
