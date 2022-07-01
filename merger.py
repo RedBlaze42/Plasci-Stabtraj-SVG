@@ -26,7 +26,7 @@ def merge_svg(base_data, rocket_path, output_path):
     scale = (mm_per_pix**2)/(inverse_scale)
     rocket = svgutils.compose.SVG(rocket_path)
     rocket.rotate(90, 0,0)
-    rocket.move(f"{orig_dims[1]+rectangle_coords[0]/scale}mm", f"{orig_dims[0]+rectangle_coords[1]/scale}mm")
+    rocket.move(f"{orig_dims[1]+((rectangle_coords[0]*mm_per_pix)/scale)}mm", f"{(orig_dims[0]/2)+((rectangle_coords[1]*mm_per_pix)/scale)}mm")
     rocket.scale(scale)
 
     figure = svgutils.transform.fromfile(base_path)
