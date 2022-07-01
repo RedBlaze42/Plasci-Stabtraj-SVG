@@ -2,7 +2,7 @@ import svgutils
 from svgpathtools import svg2paths
 from math import ceil
 
-mm_per_pix = 2.82
+mm_per_pix = 2.8346
 
 def svg_bbox(path):
     paths, attributes = svg2paths(path)
@@ -22,11 +22,14 @@ def merge_svg(base_data, rocket_path, output_path):
     orig_dims = bbox[1] - bbox[0], bbox[3] - bbox[2]
     inverse_scales = orig_dims[1]/(target_size[0]/mm_per_pix), orig_dims[0]/(target_size[1]/mm_per_pix)
     inverse_scale = max(*inverse_scales)
+    new_dims = orig_dims[0]*mm_per_pix/inverse_scale, orig_dims[1]*mm_per_pix/inverse_scale
     
     scale = (mm_per_pix**2)/(inverse_scale)
     rocket = svgutils.compose.SVG(rocket_path)
     rocket.rotate(90, 0,0)
-    rocket.move(f"{orig_dims[1]+((rectangle_coords[0]*mm_per_pix)/scale)}mm", f"{(orig_dims[0]/2)+((rectangle_coords[1]*mm_per_pix)/scale)}mm")
+    translate_x = orig_dims[1] + rectangle_coords[0]*mm_per_pix/scale
+    translate_y = orig_dims[0]/2 + (rectangle_coords[1] + 0.5*(target_size[1] - new_dims[0]))*mm_per_pix/scale
+    rocket.move(f"{translate_x}mm", f"{translate_y}mm")
     rocket.scale(scale)
 
     figure = svgutils.transform.fromfile(base_path)
