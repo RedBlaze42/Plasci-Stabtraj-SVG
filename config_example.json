@@ -2,5 +2,29 @@
     "api_key": "SCAE api_key",
     "cookies": "PHPSESSID=???????????????????????",
     "campaign": "C'Space",
-    "launch_year": 2022
+    "launch_year": 2022,
+    "bases": {
+        "minif": {
+            "path": "base_minif.svg",
+            "rectangle_coords": [
+                2.202,
+                11.007
+            ],
+            "rectangle_size": [
+                81.867,
+                29.388
+            ]
+        },
+        "fusex": {
+            "path": "base_minif.svg",
+            "rectangle_coords": [
+                2.384,
+                18.161
+            ],
+            "rectangle_size": [
+                144.489,
+                51.867
+            ]
+        }
+    }
 }
