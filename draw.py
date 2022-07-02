@@ -8,6 +8,8 @@ from math import sqrt, pow
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
 
 letters = [letter for letter in "ABCDEFGHIJKLMNOPQRSTUVXYZ"]
+max_text_width = 0.75
+text_height_percentage = 0.75
 
 chart_series = [
     "aileron",
@@ -193,16 +195,26 @@ class StabDrawing():
         
         # Project name
         base = min(point[1] for point in self.series_polys["fuselage"])
-        base_fairing = min(point[1] for point in self.series_polys["cone"])
-        text_y = -int((max(base, base_fairing) - min(base, base_fairing))/2-base_fairing)
-        min_diam = min(point[0] for point in (self.series_polys["fuselage"]+self.series_polys["fuselage2"]) if point[0] > 0)
+        top = max(point[1] for point in self.series_polys["fuselage"])
+        text_y = -int((max(base, top) - min(base, top))/2-top)
         
-        text = Text(self.name.upper(), min_diam*0.5, self.font_path, (0, text_y), rotate_angle=90, rotate_origin=(0, text_y))
+        min_diam = max(point[0] for point in self.series_polys["fuselage"])
+        text_y_range = text_y - max_text_width*(top - base)/2, text_y + max_text_width*(top - base)/2
+        text_y_size = text_y_range[1] - text_y_range[0]
+
+        points = [(abs(point[0]), point[1]) for point in self.series_polys["fuselage"]]
+        for point in points:
+            if point[0] < min_diam and text_y_range[0] < point[1] < text_y_range[1]:
+                min_diam = point[0]                        
+                
+        text = Text(self.name.upper(), min_diam*text_height_percentage, self.font_path, (0, text_y), rotate_angle=90, rotate_origin=(0, text_y))
         text_bbox = text.get_bbox()
         
-        #if text_bbox[3] - text_bbox[1]: # TODO Modifier la taille de police dynamiquement
-        #    text.set_font_size(min_diam*0.5)
-        #    text_bbox = text.get_bbox()
+        font_size_modifier = min_diam*text_height_percentage
+        while text_bbox[2]-text_bbox[0] > text_y_size or text_bbox[3]-text_bbox[1] > 2*min_diam*text_height_percentage:
+            font_size_modifier -= 1
+            text.set_font_size(font_size_modifier)
+            text_bbox = text.get_bbox()
         
         text.offset[0] -= int(text_bbox[2]/2)
         text.offset[1] -= int(text_bbox[3]/2)
