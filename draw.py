@@ -253,7 +253,7 @@ def main():
     from pathlib import Path
     from svg2pdf import bulk_convert
     os.makedirs("errors", exist_ok=True)
-    os.makedirs("outputs", exist_ok=True)
+    os.makedirs("output_rockets", exist_ok=True)
     files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
     errors = list()
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
@@ -262,7 +262,7 @@ def main():
     for file in tqdm(files):
         project = project_data[Path(file).name.split("_")[0]]
         try:
-            StabDrawing(Path(file), 2000, 6000, project["name"], 20).draw(f"outputs/{Path(file).stem}.svg")
+            StabDrawing(Path(file), 2000, 6000, project["name"], 20).draw(f"output_rockets/{Path(file).stem}.svg")
         except Exception as e:
             errors.append((file, e))
             os.rename(file, Path("errors")/Path(file).name)
@@ -272,7 +272,7 @@ def main():
     for error in errors:
         print(f" - Erreur sur le fichier {Path(error[0]).name}: ({type(error[1]).__name__}) {error[1]}")
         
-    bulk_convert("outputs/*.svg", "output_rockets.pdf")
+    bulk_convert("output_rockets/*.svg", "output_rockets.pdf")
 
 if __name__ == '__main__':
     main()

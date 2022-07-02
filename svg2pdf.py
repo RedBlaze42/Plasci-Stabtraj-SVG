@@ -19,4 +19,4 @@ def bulk_convert(from_glob, output):
     shutil.rmtree("temp")
 
 if __name__ == "__main__":
-    bulk_convert("outputs/*.svg", "output.pdf")
+    bulk_convert("output_rockets/*.svg", "output.pdf")

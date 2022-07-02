@@ -94,10 +94,10 @@ def main():
     with open("config.json", "r", encoding="utf-8") as f:
         base_data = json.load(f)["bases"]
         
-    for rocket in glob.glob("outputs/*.svg"):
+    for rocket in glob.glob("output_rockets/*.svg"):
         rocket_type = project_types[Path(rocket).name.split("_")[0]]
         rocket_base_data = base_data[rocket_type]
-        apply_svg(rocket_base_data, rocket, rocket.replace("outputs","output_cards").replace(".svg", f"_{rocket_type}.svg"))
+        apply_svg(rocket_base_data, rocket, rocket.replace("output_rockets","output_cards").replace(".svg", f"_{rocket_type}.svg"))
     
     platter_dims = (601, 301)
     merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")], platter_dims, "output_platters", prefix="fusex")

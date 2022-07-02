@@ -1,4 +1,4 @@
-outputs
+output*
 cache
 *.xlsx
 *.xls
