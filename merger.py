@@ -1,8 +1,14 @@
 import svgutils
 from svgpathtools import svg2paths
-from math import ceil
+import re
+from pathlib import Path
 
 mm_per_pix = 2.8346
+margin_mm = 0.4
+
+viewbox_regex = re.compile(r'viewBox="(\d+?\.?\d*?) (\d+?\.?\d*?) (\d+?\.?\d*?) (\d+?\.?\d*?)"')
+edit_regex = re.compile(r'(<svg.*?)>')
+margin_px = margin_mm*mm_per_pix
 
 def svg_bbox(path):
     paths, attributes = svg2paths(path)
@@ -27,7 +33,7 @@ def apply_svg(base_data, rocket_path, output_path):
     scale = (mm_per_pix**2)/(inverse_scale)
     rocket = svgutils.compose.SVG(rocket_path)
     rocket.rotate(90, 0,0)
-    translate_x = orig_dims[1] + rectangle_coords[0]*mm_per_pix/scale
+    translate_x = orig_dims[1] + (rectangle_coords[0] + 0.5*(target_size[0] - new_dims[1]))*mm_per_pix/scale
     translate_y = orig_dims[0]/2 + (rectangle_coords[1] + 0.5*(target_size[1] - new_dims[0]))*mm_per_pix/scale
     rocket.move(f"{translate_x}mm", f"{translate_y}mm")
     rocket.scale(scale)
@@ -35,20 +41,67 @@ def apply_svg(base_data, rocket_path, output_path):
     figure = svgutils.transform.fromfile(base_path)
     figure.append(rocket)
     figure.save(output_path)
+    set_svg_size(output_path)
+
+def set_svg_size(path):
+    with open(path, "r") as f:
+        svg_data = f.read()
+    svg_viewbox = re.findall(viewbox_regex, svg_data)[0]
+    svg_viewbox = [float(coord) for coord in svg_viewbox]
+    svg_data = re.sub(edit_regex, f'\g<1> width="{svg_viewbox[2]-svg_viewbox[0]}" height="{svg_viewbox[3]-svg_viewbox[1]}">', svg_data)    
+    with open(path, "w") as f:
+        f.write(svg_data)
+
+def merge_platters(cards, platter_dims, output_dir, prefix=""):
+    platters = list()
+    platter_number = 0
     
+    current_coords = [0, 0]
+    svg_elements = list()
+    
+    for card_path in cards:
+        card = svgutils.compose.SVG(card_path)
+        card_dims = (card.width, card.height)
+        
+        if (current_coords[0]+card_dims[0])/mm_per_pix > platter_dims[0]:
+            current_coords[1] += card_dims[1] + margin_px
+            current_coords[0] = 0
+        
+        if (current_coords[1]+card_dims[1])/mm_per_pix > platter_dims[1]:
+            platter = svgutils.compose.Figure(*(dim*mm_per_pix for dim in platter_dims), *svg_elements)
+            platter.save(Path(output_dir)/f"{prefix}_{platter_number}.svg")
+            current_coords = [0, 0]
+            svg_elements = list()
+            platter_number += 1
+        
+        translate_coords = current_coords
+        card.move(*translate_coords)
+        svg_elements.append(card)
+        current_coords[0] = current_coords[0] + card_dims[0] + margin_px
+        
+
+    platter = svgutils.compose.Figure(*(dim*mm_per_pix for dim in platter_dims), *svg_elements)
+    platter.save(Path(output_dir)/f"{prefix}_{platter_number}.svg")
+ 
 def main():
     import glob, json, os
     from pathlib import Path
-    from tqdm import tqdm
     os.makedirs("output_cards", exist_ok=True)
+    os.makedirs("output_platters", exist_ok=True)
+    
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
         project_types = {project["id"]: project["type"] for project in json.load(f)["project_list"]}
     with open("config.json", "r", encoding="utf-8") as f:
         base_data = json.load(f)["bases"]
         
-    for rocket in tqdm(glob.glob("outputs/*.svg")):
-        rocket_base_data = base_data[project_types[Path(rocket).name.split("_")[0]]]
-        apply_svg(rocket_base_data, rocket, rocket.replace("outputs","output_cards"))
-        
+    for rocket in glob.glob("outputs/*.svg"):
+        rocket_type = project_types[Path(rocket).name.split("_")[0]]
+        rocket_base_data = base_data[rocket_type]
+        apply_svg(rocket_base_data, rocket, rocket.replace("outputs","output_cards").replace(".svg", f"_{rocket_type}.svg"))
+    
+    platter_dims = (601, 301)
+    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")], platter_dims, "output_platters", prefix="fusex")
+    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*2, platter_dims, "output_platters", prefix="minif")
+
 if __name__ == "__main__":
     main()
