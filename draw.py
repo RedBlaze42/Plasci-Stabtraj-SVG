@@ -76,6 +76,7 @@ class StabDrawing():
         except KeyError:
             self.sheet = book["stabilito"]
         self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
+        self.width, self.height = width, height
         self.stroke_width = stroke_width
         self.path = path
         self.name = name
@@ -205,8 +206,14 @@ class StabDrawing():
         points = [(abs(point[0]), point[1]) for point in self.series_polys["fuselage"]]
         for point in points:
             if point[0] < min_diam and text_y_range[0] < point[1] < text_y_range[1]:
-                min_diam = point[0]                        
-                
+                min_diam = point[0]
+        
+        if min_diam == max(point[0] for point in self.series_polys["fuselage"]):
+            min_diam, min_diam_y = 0, self.height
+            for point in points:
+                if point[1] < text_y and point[0] > min_diam and point[1] < min_diam_y:
+                    min_diam = point[0]
+        
         text = Text(self.name.upper(), min_diam*text_height_percentage, self.font_path, (0, text_y), rotate_angle=90, rotate_origin=(0, text_y))
         text_bbox = text.get_bbox()
         
