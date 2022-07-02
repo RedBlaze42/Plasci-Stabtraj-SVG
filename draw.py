@@ -133,8 +133,7 @@ class StabDrawing():
         
         for post_process_func in self.post_process_funcs:
             self.series_polys = post_process_func(self.series_polys)
-        
-        self.series_polys = self.clean_series(self.series_polys)
+            self.series_polys = self.clean_series(self.series_polys)
                 
         polygons = list(self.series_polys.values())
         outline = self.union(polygons)
