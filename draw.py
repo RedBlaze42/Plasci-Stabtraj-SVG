@@ -67,7 +67,7 @@ def post_process_motor(series_polys):
 
 class StabDrawing():
     
-    def __init__(self, path, width, height, name, base_notch_width, font_path="fonts/nasalization-rg.otf"):
+    def __init__(self, path, width, height, name, base_notch_width, font_path="fonts/nasalization-rg.otf", stroke_width=0.01):
         self.post_process_funcs = [post_process_fins, post_process_motor, self.get_body_base_points]
         self.font_path = font_path
         book = openpyxl.load_workbook(path, data_only=True)
@@ -76,7 +76,7 @@ class StabDrawing():
         except KeyError:
             self.sheet = book["stabilito"]
         self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
-        self.stroke_width = 3
+        self.stroke_width = stroke_width
         self.path = path
         self.name = name
         self.base_notch_width = base_notch_width
