@@ -27,7 +27,7 @@ fins_series = [
     "canard2"
 ]
 
-motor_series = [
+body_series = [
     "fuselage",
     "fuselage2"
 ]
@@ -55,7 +55,7 @@ def post_process_fins(series_polys):
     return series_polys
 
 def post_process_motor(series_polys):
-    for motor_serie in motor_series:
+    for motor_serie in body_series:
         serie = series_polys[motor_serie]
         for i in range(1, len(serie)):
             if serie[i][1] > serie[i-1][1]:
