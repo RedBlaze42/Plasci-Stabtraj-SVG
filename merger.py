@@ -16,7 +16,7 @@ def svg_bbox(path):
         
     return xmin, xmax, ymin, ymax
 
-def merge_svg(base_data, rocket_path, output_path):
+def apply_svg(base_data, rocket_path, output_path):
     base_path, rectangle_coords, target_size = base_data["path"], base_data["rectangle_coords"], base_data["rectangle_size"]
     bbox = svg_bbox(rocket_path)
     orig_dims = bbox[1] - bbox[0], bbox[3] - bbox[2]
@@ -48,7 +48,7 @@ def main():
         
     for rocket in tqdm(glob.glob("outputs/*.svg")):
         rocket_base_data = base_data[project_types[Path(rocket).name.split("_")[0]]]
-        merge_svg(rocket_base_data, rocket, rocket.replace("outputs","output_cards"))
+        apply_svg(rocket_base_data, rocket, rocket.replace("outputs","output_cards"))
         
 if __name__ == "__main__":
     main()
