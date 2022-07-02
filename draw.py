@@ -65,8 +65,8 @@ def post_process_motor(series_polys):
 
 class StabDrawing():
     
-    def __init__(self, path, width, height, name, font_path="fonts/nasalization-rg.otf"):
-        self.post_process_funcs = [post_process_fins, post_process_motor]
+    def __init__(self, path, width, height, name, base_notch_width, font_path="fonts/nasalization-rg.otf"):
+        self.post_process_funcs = [post_process_fins, post_process_motor, self.get_body_base_points]
         self.font_path = font_path
         book = openpyxl.load_workbook(path, data_only=True)
         try:
@@ -77,6 +77,7 @@ class StabDrawing():
         self.stroke_width = 3
         self.path = path
         self.name = name
+        self.base_notch_width = base_notch_width
         
         self.series = dict()
         for i, serie in enumerate(self.sheet._charts[0].series):
@@ -117,9 +118,9 @@ class StabDrawing():
             
         return output
 
-    def draw_polygon(self, points, color="red"):
-        for i in range(1, len(points)):
-            self.d.append(draw.Line(*points[i-1], *points[i], stroke=color, stroke_width=self.stroke_width, fill="none"))
+    def draw_lines(self, lines, color="red"):
+        for line in lines:
+            self.d.append(draw.Line(*line[0], *line[1], stroke=color, stroke_width=self.stroke_width, fill="none"))
 
     def draw(self, path):
         self.series_polys = dict()
@@ -136,11 +137,17 @@ class StabDrawing():
             self.series_polys = self.clean_series(self.series_polys)
                 
         polygons = list(self.series_polys.values())
-        outline = self.union(polygons)
-        if len(outline) != 1:
+        outlines = self.union(polygons)
+        if len(outlines) != 1:
             raise Exception(f"Too much polygons after union")
-        self.outline = outline[0]
-        self.draw_polygon(self.outline)
+        outline = outlines[0]
+        
+        lines = list()
+        for i in range(1, len(outline)-1):
+            if outline[i-1] in self.body_base_points and outline[i] in self.body_base_points: continue
+            lines.append([outline[i-1], outline[i]])
+        lines.append([lines[-1][1], lines[0][0]])
+        self.draw_lines(lines)
         
         self.draw_extras()
         
@@ -182,7 +189,7 @@ class StabDrawing():
         for fin_serie_name in fins_series:
             if fin_serie_name not in self.series_polys: continue
             fin_serie = self.series_polys[fin_serie_name]
-            self.draw_polygon([fin_serie[0], fin_serie[-2]], color="lime")
+            self.draw_lines([[fin_serie[0], fin_serie[-2]]], color="lime")
         
         # Project name
         base = min(point[1] for point in self.series_polys["fuselage"])
@@ -201,6 +208,31 @@ class StabDrawing():
         text.offset[1] -= int(text_bbox[3]/2)
         text.rotation_origin = text.offset
         text.draw(self.d)
+        
+        # Notch
+        base_height = self.body_base_points[0][1]
+        for point in self.body_base_points:
+            if point[0] < 0:
+                self.draw_lines([[point, [-self.base_notch_width/2, base_height]]])
+            else:
+                self.draw_lines([[point, [self.base_notch_width/2, base_height]]])
+        self.draw_lines([[[-self.base_notch_width/2, base_height], [self.base_notch_width/2, base_height]]], color="blue")
+        
+        
+    def get_body_base_points(self, series_polys):
+        self.body_base_points = list()
+        for body_serie in body_series:
+            base_point = 0, 0
+            for x, y in series_polys[body_serie]:
+                if abs(y) > abs(base_point[1]):
+                    base_point = x, y
+                elif abs(y) == abs(base_point[1]) and abs(x) > abs(base_point[0]):
+                    base_point = x, y
+
+            self.body_base_points.append(list(int(coord) for coord in base_point))
+        if len(self.body_base_points) != 2:
+            raise Exception("Too many base points")
+        return series_polys
 
 def main():
     from glob import glob
@@ -218,7 +250,7 @@ def main():
     for file in tqdm(files):
         project = project_data[Path(file).name.split("_")[0]]
         try:
-            StabDrawing(Path(file), 2000, 6000, project["name"]).draw(f"outputs/{Path(file).stem}.svg")
+            StabDrawing(Path(file), 2000, 6000, project["name"], 20).draw(f"outputs/{Path(file).stem}.svg")
         except Exception as e:
             errors.append((file, e))
             os.rename(file, Path("errors")/Path(file).name)
