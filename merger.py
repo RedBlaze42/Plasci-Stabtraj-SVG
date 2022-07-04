@@ -22,6 +22,17 @@ def svg_bbox(path):
         
     return xmin, xmax, ymin, ymax
 
+def get_scale(svg_path, target_size):
+    bbox = svg_bbox(svg_path)
+    orig_dims = bbox[1] - bbox[0], bbox[3] - bbox[2]
+    
+    inverse_scales = orig_dims[1]/(target_size[0]/mm_per_pix), orig_dims[0]/(target_size[1]/mm_per_pix)
+    inverse_scale = max(*inverse_scales)
+    new_dims = orig_dims[0]*mm_per_pix/inverse_scale, orig_dims[1]*mm_per_pix/inverse_scale
+    
+    scale = (mm_per_pix**2)/(inverse_scale)
+    return scale
+
 def apply_svg(base_data, rocket_path, output_path):
     base_path, rectangle_coords, target_size = base_data["path"], base_data["rectangle_coords"], base_data["rectangle_size"]
     bbox = svg_bbox(rocket_path)
