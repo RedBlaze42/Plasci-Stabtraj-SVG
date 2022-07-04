@@ -78,7 +78,6 @@ class StabDrawing():
             self.sheet = book["Stabilito"]
         except KeyError:
             self.sheet = book["stabilito"]
-        self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
         self.width, self.height = width, height
         self.stroke_width = stroke_width
         self.path = path
@@ -129,6 +128,7 @@ class StabDrawing():
             self.d.append(draw.Line(*line[0], *line[1], stroke=color, stroke_width=self.stroke_width, fill="none"))
 
     def draw(self, path):
+        self.d = draw.Drawing(self.width, self.height, origin=(-int(self.width/2), -self.height), displayInline=False)
         self.series_polys = dict()
         for serie_name, serie_points in self.series.items(): # TODO Ajouter dans post-process
             points = self.get_points(serie_points)
@@ -265,6 +265,7 @@ def draw_worker(file, project, base_config):
         drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2)
         drawing.draw(output_path)
         scale = get_scale(output_path, base_config["rectangle_size"])
+        Path(output_path).unlink()
         drawing.notch_width = mm_per_pix*base_config["notch_size"]/scale
         drawing.draw(output_path)
     except Exception as e:
