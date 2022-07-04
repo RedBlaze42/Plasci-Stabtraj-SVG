@@ -13,10 +13,11 @@
             "rectangle_size": [
                 81.867,
                 29.388
-            ]
+            ],
+            "notch_size": 2
         },
         "fusex": {
-            "path": "base_minif.svg",
+            "path": "base_fusex.svg",
             "rectangle_coords": [
                 2.384,
                 18.161
@@ -24,7 +25,8 @@
             "rectangle_size": [
                 144.489,
                 51.867
-            ]
+            ],
+            "notch_size": 4
         }
     }
 }
