@@ -293,7 +293,7 @@ def main():
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
         project_data = {project["id"]: project for project in json.load(f)["project_list"]}
     
-    pool = ProcessPoolExecutor(max_workers=3)
+    pool = ProcessPoolExecutor(max_workers=4)
     futures = list()
     for file in files:
         project = project_data[Path(file).name.split("_")[0]]
