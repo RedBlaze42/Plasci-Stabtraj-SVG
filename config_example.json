@@ -28,5 +28,7 @@
             ],
             "notch_size": 4
         }
-    }
+    },
+    "minif_copies": 3,
+    "fusex_copies": 1
 }

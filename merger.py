@@ -102,7 +102,9 @@ def main():
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
         project_types = {project["id"]: project["type"] for project in json.load(f)["project_list"]}
     with open("config.json", "r", encoding="utf-8") as f:
-        base_data = json.load(f)["bases"]
+        config = json.load(f)
+    base_data = config["bases"]
+    minif_copies, fusex_copies = config["minif_copies"], config["fusex_copies"]
         
     for rocket in glob.glob("output_rockets/*.svg"):
         rocket_type = project_types[Path(rocket).name.split("_")[0]]
@@ -110,8 +112,8 @@ def main():
         apply_svg(rocket_base_data, rocket, rocket.replace("output_rockets","output_cards").replace(".svg", f"_{rocket_type}.svg"))
     
     platter_dims = (601, 301)
-    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")], platter_dims, "output_platters", prefix="fusex")
-    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*2, platter_dims, "output_platters", prefix="minif")
+    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")]*fusex_copies, platter_dims, "output_platters", prefix="fusex")
+    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*minif_copies, platter_dims, "output_platters", prefix="minif")
 
 if __name__ == "__main__":
     main()
