@@ -64,7 +64,6 @@ def set_svg_size(path):
         f.write(svg_data)
 
 def merge_platters(cards, platter_dims, output_dir, prefix=""):
-    platters = list()
     platter_number = 0
     
     current_coords = [0, 0]

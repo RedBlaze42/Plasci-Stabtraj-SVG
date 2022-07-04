@@ -1,9 +1,12 @@
 import openpyxl
 import pyclipper
 import re
-import drawSvg as draw
 from svg_text import Text
 from math import sqrt, pow
+
+import warnings
+warnings.simplefilter("ignore")
+import drawSvg as draw
 
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
 
