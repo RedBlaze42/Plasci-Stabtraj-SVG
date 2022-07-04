@@ -112,8 +112,13 @@ def main():
         apply_svg(rocket_base_data, rocket, rocket.replace("output_rockets","output_cards").replace(".svg", f"_{rocket_type}.svg"))
     
     platter_dims = (601, 301)
-    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")]*fusex_copies, platter_dims, "output_platters", prefix="fusex")
-    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*minif_copies, platter_dims, "output_platters", prefix="minif")
+    list_minif = [card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*minif_copies
+    list_fusex = [card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")]*fusex_copies
+    list_minif.sort()
+    list_fusex.sort()
+    merge_platters(list_fusex, platter_dims, "output_platters", prefix="fusex")
+    merge_platters(list_minif, platter_dims, "output_platters", prefix="minif")
+    print(f"Plateau(x) nécéssaires: {len(glob.glob('output_platters/*.svg'))}")
 
 if __name__ == "__main__":
     main()
