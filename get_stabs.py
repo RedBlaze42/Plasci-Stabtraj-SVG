@@ -90,7 +90,7 @@ def get_project_details(project_id):
         
     except AttributeError as e:
         print(e)
-        return None
+        return None, None
     finally:
         pass
     
@@ -103,13 +103,17 @@ def main():
     converter = ThreadPoolExecutor(max_workers=max_workers)
     futures = list()
     
-    for project in tqdm(projects, desc="Téléchargement des stabtraj"):
+    progress_bar = tqdm(total=len(projects), desc="Téléchargement des stabtraj")
+    progress_bar.set_postfix({"errors": 0})
+    for project in projects:
+        progress_bar.update(1)
         project_details, converter_args = get_project_details(project["id"])
 
         if project_details is None:
             print(f"Error on project {project['name']}")
             missing_projects.append(project)
             projects.remove(project)
+            progress_bar.set_postfix({"errors": len(missing_projects)})
         elif project_details == "Invalid campaign":
             continue
         else:
@@ -119,11 +123,13 @@ def main():
             futures.append(converter.submit(convert_workbook, *converter_args))
 
     progress_bar = tqdm(total=len(futures), desc="Conversion des stabtraj")
+    progress_bar.set_postfix({"errors": 0})
     errors = list()
     for future in as_completed(futures):
         result = future.result()
         if not result[0]: errors.append(result[1])
         progress_bar.update(1)
+        progress_bar.set_postfix({"errors": len(errors)})
     progress_bar.close()
         
     with open(Path("cache")/Path("project_list.json"), "w", encoding="utf-8") as f:
