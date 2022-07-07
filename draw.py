@@ -151,7 +151,13 @@ class StabDrawing():
         lines = list()
         for i in range(1, len(outline)-1):
             if outline[i-1] in self.body_base_points and outline[i] in self.body_base_points: continue
-            lines.append([outline[i-1], outline[i]])
+            
+            if outline[i-1][1] == outline[i][1] == self.body_base_points[0][1]:
+                
+                lines.append([outline[i-1], min((point for point in self.body_base_points), key=lambda x:self.distance(outline[i-1], x))])
+                lines.append([min((point for point in self.body_base_points), key=lambda x:self.distance(outline[i], x)), outline[i]])
+            else:
+                lines.append([outline[i-1], outline[i]])
         lines.append([lines[-1][1], lines[0][0]])
         self.draw_lines(lines)
         
