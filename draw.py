@@ -268,7 +268,7 @@ def draw_worker(file, project, base_config):
     
     try:
         output_path = f"output_rockets/{Path(file).stem}.svg"
-        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2)
+        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2, stroke_width=3)
         drawing.draw(output_path)
         scale = get_scale(output_path, base_config["rectangle_size"])
         Path(output_path).unlink()
