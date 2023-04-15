@@ -22,6 +22,17 @@ def svg_bbox(path):
         
     return xmin, xmax, ymin, ymax
 
+def get_scale(svg_path, target_size):
+    bbox = svg_bbox(svg_path)
+    orig_dims = bbox[1] - bbox[0], bbox[3] - bbox[2]
+    
+    inverse_scales = orig_dims[1]/(target_size[0]/mm_per_pix), orig_dims[0]/(target_size[1]/mm_per_pix)
+    inverse_scale = max(*inverse_scales)
+    new_dims = orig_dims[0]*mm_per_pix/inverse_scale, orig_dims[1]*mm_per_pix/inverse_scale
+    
+    scale = (mm_per_pix**2)/(inverse_scale)
+    return scale
+
 def apply_svg(base_data, rocket_path, output_path):
     base_path, rectangle_coords, target_size = base_data["path"], base_data["rectangle_coords"], base_data["rectangle_size"]
     bbox = svg_bbox(rocket_path)
@@ -53,7 +64,6 @@ def set_svg_size(path):
         f.write(svg_data)
 
 def merge_platters(cards, platter_dims, output_dir, prefix=""):
-    platters = list()
     platter_number = 0
     
     current_coords = [0, 0]
@@ -92,7 +102,9 @@ def main():
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
         project_types = {project["id"]: project["type"] for project in json.load(f)["project_list"]}
     with open("config.json", "r", encoding="utf-8") as f:
-        base_data = json.load(f)["bases"]
+        config = json.load(f)
+    base_data = config["bases"]
+    minif_copies, fusex_copies = config["minif_copies"], config["fusex_copies"]
         
     for rocket in glob.glob("output_rockets/*.svg"):
         rocket_type = project_types[Path(rocket).name.split("_")[0]]
@@ -100,8 +112,13 @@ def main():
         apply_svg(rocket_base_data, rocket, rocket.replace("output_rockets","output_cards").replace(".svg", f"_{rocket_type}.svg"))
     
     platter_dims = (601, 301)
-    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")], platter_dims, "output_platters", prefix="fusex")
-    merge_platters([card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*2, platter_dims, "output_platters", prefix="minif")
+    list_minif = [card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*minif_copies
+    list_fusex = [card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")]*fusex_copies
+    list_minif.sort()
+    list_fusex.sort()
+    merge_platters(list_fusex, platter_dims, "output_platters", prefix="fusex")
+    merge_platters(list_minif, platter_dims, "output_platters", prefix="minif")
+    print(f"Plateau(x) nécéssaires: {len(glob.glob('output_platters/*.svg'))}")
 
 if __name__ == "__main__":
     main()

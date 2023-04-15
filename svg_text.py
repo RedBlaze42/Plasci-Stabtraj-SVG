@@ -1,6 +1,9 @@
-import drawSvg as draw
 import math
 import freetype
+
+import warnings
+warnings.simplefilter("ignore")
+import drawSvg as draw
 
 load_flags = freetype.FT_LOAD_DEFAULT | freetype.FT_LOAD_NO_BITMAP
 

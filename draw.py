@@ -1,9 +1,12 @@
 import openpyxl
 import pyclipper
 import re
-import drawSvg as draw
 from svg_text import Text
 from math import sqrt, pow
+
+import warnings
+warnings.simplefilter("ignore")
+import drawSvg as draw
 
 range_regex = re.compile(r"!\$(.)\$(\d{3}):\$(.)\$(\d{3})")
 
@@ -67,7 +70,7 @@ def post_process_motor(series_polys):
 
 class StabDrawing():
     
-    def __init__(self, path, width, height, name, base_notch_width, font_path="fonts/nasalization-rg.otf", stroke_width=0.01):
+    def __init__(self, path, width, height, name, notch_width, font_path="fonts/nasalization-rg.otf", stroke_width=0.01):
         self.post_process_funcs = [post_process_fins, post_process_motor, self.get_body_base_points]
         self.font_path = font_path
         book = openpyxl.load_workbook(path, data_only=True)
@@ -75,12 +78,11 @@ class StabDrawing():
             self.sheet = book["Stabilito"]
         except KeyError:
             self.sheet = book["stabilito"]
-        self.d = draw.Drawing(width, height, origin=(-int(width/2), -height), displayInline=False)
         self.width, self.height = width, height
         self.stroke_width = stroke_width
         self.path = path
         self.name = name
-        self.base_notch_width = base_notch_width
+        self.notch_width = notch_width
         
         self.series = dict()
         for i, serie in enumerate(self.sheet._charts[0].series):
@@ -126,6 +128,7 @@ class StabDrawing():
             self.d.append(draw.Line(*line[0], *line[1], stroke=color, stroke_width=self.stroke_width, fill="none"))
 
     def draw(self, path):
+        self.d = draw.Drawing(self.width, self.height, origin=(-int(self.width/2), -self.height), displayInline=False)
         self.series_polys = dict()
         for serie_name, serie_points in self.series.items(): # TODO Ajouter dans post-process
             points = self.get_points(serie_points)
@@ -148,7 +151,13 @@ class StabDrawing():
         lines = list()
         for i in range(1, len(outline)-1):
             if outline[i-1] in self.body_base_points and outline[i] in self.body_base_points: continue
-            lines.append([outline[i-1], outline[i]])
+            
+            if outline[i-1][1] == outline[i][1] == self.body_base_points[0][1]:
+                
+                lines.append([outline[i-1], min((point for point in self.body_base_points), key=lambda x:self.distance(outline[i-1], x))])
+                lines.append([min((point for point in self.body_base_points), key=lambda x:self.distance(outline[i], x)), outline[i]])
+            else:
+                lines.append([outline[i-1], outline[i]])
         lines.append([lines[-1][1], lines[0][0]])
         self.draw_lines(lines)
         
@@ -232,10 +241,10 @@ class StabDrawing():
         base_height = self.body_base_points[0][1]
         for point in self.body_base_points:
             if point[0] < 0:
-                self.draw_lines([[point, [-self.base_notch_width/2, base_height]]])
+                self.draw_lines([[point, [-self.notch_width/2, base_height]]])
             else:
-                self.draw_lines([[point, [self.base_notch_width/2, base_height]]])
-        self.draw_lines([[[-self.base_notch_width/2, base_height], [self.base_notch_width/2, base_height]]], color="blue")
+                self.draw_lines([[point, [self.notch_width/2, base_height]]])
+        self.draw_lines([[[-self.notch_width/2, base_height], [self.notch_width/2, base_height]]], color="blue")
         
         
     def get_body_base_points(self, series_polys):
@@ -253,29 +262,63 @@ class StabDrawing():
             raise Exception("Too many base points")
         return series_polys
 
+def draw_worker(file, project, base_config):
+    from merger import get_scale, mm_per_pix
+    from pathlib import Path
+    
+    try:
+        output_path = f"output_rockets/{Path(file).stem}.svg"
+        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2, stroke_width=3)
+        drawing.draw(output_path)
+        scale = get_scale(output_path, base_config["rectangle_size"])
+        Path(output_path).unlink()
+        drawing.notch_width = mm_per_pix*base_config["notch_size"]/scale
+        drawing.draw(output_path)
+    except Exception as e:
+        return e, file
+    finally:
+        pass
+    
+    return None
+
 def main():
     from glob import glob
     from tqdm import tqdm
     import os, json
     from pathlib import Path
     from svg2pdf import bulk_convert
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    
     os.makedirs("errors", exist_ok=True)
     os.makedirs("output_rockets", exist_ok=True)
     files = [file for file in glob("cache/*.xlsx") if not "_temp." in file]
     errors = list()
+    
+    with open("config.json") as f:
+        bases = json.load(f)["bases"]
+    
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
         project_data = {project["id"]: project for project in json.load(f)["project_list"]}
     
-    for file in tqdm(files):
+    pool = ProcessPoolExecutor(max_workers=4)
+    futures = list()
+    for file in files:
         project = project_data[Path(file).name.split("_")[0]]
-        try:
-            StabDrawing(Path(file), 2000, 6000, project["name"], 20).draw(f"output_rockets/{Path(file).stem}.svg")
-        except Exception as e:
+        futures.append(pool.submit(draw_worker, file, project, bases[project["type"]]))
+
+    progress_bar = tqdm(total=len(futures), desc="Dessin des fusées")
+    progress_bar.set_postfix({"errors": len(errors)})
+    for future in as_completed(futures):
+        progress_bar.update(1)
+        result = future.result()
+        if result is not None:
+            e, file = result
             errors.append((file, e))
             os.rename(file, Path("errors")/Path(file).name)
-        finally:
-            pass # Présent pour pouvoir facilement commenter la gestion des erreurs
-        
+            progress_bar.set_postfix({"errors": len(errors)})
+
+    progress_bar.close()
+    
     for error in errors:
         print(f" - Erreur sur le fichier {Path(error[0]).name}: ({type(error[1]).__name__}) {error[1]}")
         
