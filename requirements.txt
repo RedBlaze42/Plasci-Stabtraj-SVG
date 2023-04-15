@@ -1,0 +1,13 @@
+drawsvg==1.9.0
+freetype-py
+sanitize-filename
+tqdm
+lxml
+openpyxl
+pyclipper
+beautifulsoup4
+PyPDF2
+svglib
+svgutils
+svgpathtools
+requests
