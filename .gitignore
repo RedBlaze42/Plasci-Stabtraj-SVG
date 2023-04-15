@@ -9,6 +9,8 @@ cache
 __pycache__
 fonts
 *.prof
+.venv
+errors
 tests
 
 !config_example.json
