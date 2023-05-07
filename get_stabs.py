@@ -5,6 +5,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from subprocess import Popen
+from sanitize_filename import sanitize
 
 max_workers = 3
 
@@ -71,7 +72,7 @@ def get_project_details(project_id):
         }
         output["stabtraj_id"] = int(output['stabtraj_url'].split('=')[-1])
         
-        stab_path = Path("cache")/Path(f"{project_id}_{last_stab_text.replace(' ', '')}")
+        stab_path = Path("cache")/Path(sanitize(f"{project_id}_{last_stab_text.replace(' ', '')}"))
         if not stab_path.exists():
             with open(stab_path, "wb") as f:
                 stab_req = session.get(output["stabtraj_url"])
