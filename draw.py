@@ -262,13 +262,13 @@ class StabDrawing():
             raise Exception("Too many base points")
         return series_polys
 
-def draw_worker(file, project, base_config):
+def draw_worker(file, project, base_config, stroke_width=0.01):
     from merger import get_scale, mm_per_pix
     from pathlib import Path
     
     try:
         output_path = f"output_rockets/{Path(file).stem}.svg"
-        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2, stroke_width=3)
+        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2, stroke_width=stroke_width)
         drawing.draw(output_path)
         scale = get_scale(output_path, base_config["rectangle_size"])
         Path(output_path).unlink()
@@ -323,6 +323,20 @@ def main():
         print(f" - Erreur sur le fichier {Path(error[0]).name}: ({type(error[1]).__name__}) {error[1]}")
         
     bulk_convert("output_rockets/*.svg", "output_rockets.pdf")
+
+def test(file):
+    from pathlib import Path
+    import json, os
+
+    os.makedirs("output_rockets", exist_ok=True)
+    with open("config.json") as f:
+        bases = json.load(f)["bases"]
+    with open("cache/project_list.json", "r", encoding="utf-8") as f:
+        project_data = {project["id"]: project for project in json.load(f)["project_list"]}
+    
+    project = project_data[Path(file).name.split("_")[0]]
+    
+    draw_worker(file, project, bases["fusex"], stroke_width=3)
 
 if __name__ == '__main__':
     main()
