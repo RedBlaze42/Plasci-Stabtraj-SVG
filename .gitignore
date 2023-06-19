@@ -14,5 +14,4 @@ errors
 tests
 
 !config_example.json
-!base_minif.svg
-!base_fusex.svg
+!bases/*.svg
