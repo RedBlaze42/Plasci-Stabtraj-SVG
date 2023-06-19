@@ -70,7 +70,7 @@ def post_process_motor(series_polys):
 
 class StabDrawing():
     
-    def __init__(self, path, width, height, name, notch_width, font_path="fonts/nasalization-rg.otf", stroke_width=0.01):
+    def __init__(self, path, width, height, name, notch_width, font_path="fonts/nasalization-rg.otf", stroke_width=0.01, vertical_text=False):
         self.post_process_funcs = [post_process_fins, post_process_motor, self.get_body_base_points]
         self.font_path = font_path
         book = openpyxl.load_workbook(path, data_only=True)
@@ -83,6 +83,7 @@ class StabDrawing():
         self.path = path
         self.name = name
         self.notch_width = notch_width
+        self.vertical_text = vertical_text
         
         self.series = dict()
         for i, serie in enumerate(self.sheet._charts[0].series):
@@ -223,18 +224,26 @@ class StabDrawing():
                 if point[1] < text_y and point[0] > min_diam and point[1] < min_diam_y:
                     min_diam = point[0]
         
-        text = Text(self.name.upper(), min_diam*text_height_percentage, self.font_path, (0, text_y), rotate_angle=90, rotate_origin=(0, text_y))
-        text_bbox = text.get_bbox()
+        text = Text(self.name.upper(), min_diam*text_height_percentage, self.font_path, (0, text_y), rotate_origin=(0, text_y), vertical=self.vertical_text)
+        text_bbox = text.get_bbox() # xMin, yMin, xMax, yMax
         
         font_size_modifier = min_diam*text_height_percentage
-        while text_bbox[2]-text_bbox[0] > text_y_size or text_bbox[3]-text_bbox[1] > 2*min_diam*text_height_percentage:
+        
+        
+        width, height = text_bbox[2]-text_bbox[0], text_bbox[3]-text_bbox[1]
+        
+        while (height > text_y_size or width > 2*min_diam*text_height_percentage) and font_size_modifier > 2:
             font_size_modifier -= 1
             text.set_font_size(font_size_modifier)
             text_bbox = text.get_bbox()
-        
-        text.offset[0] -= int(text_bbox[2]/2)
-        text.offset[1] -= int(text_bbox[3]/2)
-        text.rotation_origin = text.offset
+            width, height = text_bbox[2]-text_bbox[0], text_bbox[3]-text_bbox[1]
+            
+        if not self.vertical_text: text_y *= 1.3 # WARNING Manual offset, check result
+            
+        text.offset[1] = - text_y - int(height/2)
+        if not self.vertical_text:
+            text.offset[0] -= int(height/2)
+            text.rotate_origin = int(width/2), (text_y+int(height/2))
         text.draw(self.d)
         
         # Notch
@@ -262,13 +271,13 @@ class StabDrawing():
             raise Exception("Too many base points")
         return series_polys
 
-def draw_worker(file, project, base_config, stroke_width=0.01):
+def draw_worker(file, project, base_config, stroke_width=0.01, vertical_text=False):
     from merger import get_scale, mm_per_pix
     from pathlib import Path
     
     try:
         output_path = f"output_rockets/{Path(file).stem}.svg"
-        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2, stroke_width=stroke_width)
+        drawing = StabDrawing(Path(file), 2000, 6000, project["name"], 2, stroke_width=stroke_width, vertical_text=vertical_text)
         drawing.draw(output_path)
         scale = get_scale(output_path, base_config["rectangle_size"])
         Path(output_path).unlink()
@@ -336,7 +345,9 @@ def test(file):
     
     project = project_data[Path(file).name.split("_")[0]]
     
-    draw_worker(file, project, bases["fusex"], stroke_width=3)
+    result = draw_worker(file, project, bases["fusex"], stroke_width=3)
+    if result is not None and isinstance(result[0], Exception):
+        raise result[0]
 
 if __name__ == '__main__':
     main()
