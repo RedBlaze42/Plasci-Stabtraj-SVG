@@ -7,6 +7,7 @@ mm_per_pix = 2.8346
 margin_mm = 0.4
 
 viewbox_regex = re.compile(r'viewBox="(\d+?\.?\d*?) (\d+?\.?\d*?) (\d+?\.?\d*?) (\d+?\.?\d*?)"')
+scale_regex = re.compile(r'scale\((\d+\.?\d*) (\d+\.?\d*)\)')
 edit_regex = re.compile(r'(<svg.*?)>')
 margin_px = margin_mm*mm_per_pix
 
@@ -44,15 +45,29 @@ def apply_svg(base_data, rocket_path, output_path):
     scale = (mm_per_pix**2)/(inverse_scale)
     rocket = svgutils.compose.SVG(rocket_path)
     rocket.rotate(90, 0,0)
-    translate_x = orig_dims[1] + (rectangle_coords[0] + 0.5*(target_size[0] - new_dims[1]))*mm_per_pix/scale
-    translate_y = orig_dims[0]/2 + (rectangle_coords[1] + 0.5*(target_size[1] - new_dims[0]))*mm_per_pix/scale
+    
+    if base_path is not None:
+        translate_x = orig_dims[1] + (rectangle_coords[0] + 0.5*(target_size[0] - new_dims[1]))*mm_per_pix/scale
+        translate_y = orig_dims[0]/2 + (rectangle_coords[1] + 0.5*(target_size[1] - new_dims[0]))*mm_per_pix/scale
+    else:
+        translate_x = orig_dims[1]
+        translate_y = orig_dims[0]/2
+        
     rocket.move(f"{translate_x}mm", f"{translate_y}mm")
     rocket.scale(scale)
 
-    figure = svgutils.transform.fromfile(base_path)
+    if base_path is not None:
+        figure = svgutils.transform.fromfile(base_path)
+    else:
+        figure = svgutils.transform.fromfile("bases/empty.svg")
     figure.append(rocket)
+    
     figure.save(output_path)
-    set_svg_size(output_path)
+    
+    if base_path is not None:
+        set_svg_size(output_path)
+    else:
+        set_svg_size_viewbox(output_path, [0, 0, target_size[0]*mm_per_pix, target_size[1]*mm_per_pix])
 
 def set_svg_size(path):
     with open(path, "r") as f:
@@ -60,6 +75,14 @@ def set_svg_size(path):
     svg_viewbox = re.findall(viewbox_regex, svg_data)[0]
     svg_viewbox = [float(coord) for coord in svg_viewbox]
     svg_data = re.sub(edit_regex, f'\g<1> width="{svg_viewbox[2]-svg_viewbox[0]}" height="{svg_viewbox[3]-svg_viewbox[1]}">', svg_data)    
+    with open(path, "w") as f:
+        f.write(svg_data)
+        
+def set_svg_size_viewbox(path, viewbox):
+    with open(path, "r") as f:
+        svg_data = f.read()
+    svg_data = re.sub(viewbox_regex, f'viewbox="{viewbox[0]} {viewbox[1]} {viewbox[2]} {viewbox[3]}"', svg_data)
+    svg_data = re.sub(edit_regex, f'\g<1> width="{viewbox[2]-viewbox[0]}" height="{viewbox[3]-viewbox[1]}">', svg_data)
     with open(path, "w") as f:
         f.write(svg_data)
 

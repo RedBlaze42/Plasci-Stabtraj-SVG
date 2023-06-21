@@ -6,7 +6,7 @@
     "fusex_copies": 0,
     "bases": {
         "minif": {
-            "path": "base_minif.svg",
+            "path": "bases/2022_base_minif.svg",
             "rectangle_coords": [
                 1.341,
                 10.301
@@ -18,7 +18,7 @@
             "notch_size": 2
         },
         "fusex": {
-            "path": "base_fusex.svg",
+            "path": "bases/2022_base_fusex.svg",
             "rectangle_coords": [
                 2.384,
                 18.161
