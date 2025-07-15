@@ -7,7 +7,7 @@ from tqdm import tqdm
 from subprocess import Popen
 from sanitize_filename import sanitize
 
-max_workers = 3
+max_workers = 8
 
 with open("config.json") as f:
     config = json.load(f)
@@ -28,7 +28,7 @@ def get_projects():
     
     output = list()
     for project in req.json():
-        if project["launch_year"] is not None and int(project["launch_year"]) == int(config["launch_year"]) and project["type"] in ["minif", "fusex"] and project["status"] == "wip":
+        if project["launch_year"] is not None and int(project["launch_year"]) == int(config["launch_year"]) and project["type"] in ["minif", "fusex"] and project["status"] == "prequalified":
             output.append(project)
     
     return output
@@ -60,17 +60,17 @@ def get_project_details(project_id):
         
         rce3_msg = soup.select(".border-rce3")
         stabratjs = soup.find("h3", text="StabTraj's").parent.findAll("a")
-        last_stab = sorted((stab for stab in stabratjs), key=lambda x: int(x["href"].split("=")[-1]) if x["href"] != "#" else 0, reverse=True)[0]
+        last_stab = sorted((stab for stab in stabratjs), key=lambda x: int(x["href"].split("=")[-1].split("/")[-1]) if x["href"] != "#" else 0, reverse=True)[0]
         last_stab_text = last_stab.parent.parent.select_one(".project-document-filename").text
         
         output = {
             "project_name": soup.find("input", {"id": "project__name"})["value"],
-            "club_name": soup.find("select", {"id": "project__club"}).find("option", {"selected": True}).text,
+            "club_name": soup.find("h2", {"class": "edit-subtitle"}).text,
             "stabtraj_url": "https://www.planete-sciences.org/" + last_stab["href"],
             "project_id": int(project_id),
             "rce3": rce3_msg[-1].text if len(rce3_msg) > 0  else None
         }
-        output["stabtraj_id"] = int(output['stabtraj_url'].split('=')[-1])
+        output["stabtraj_id"] = int(output['stabtraj_url'].split('=')[-1].split('/')[-1])
         
         stab_path = Path("cache")/Path(sanitize(f"{project_id}_{last_stab_text.replace(' ', '')}"))
         if not stab_path.exists():

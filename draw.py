@@ -234,15 +234,16 @@ class StabDrawing():
         
         while (height > text_y_size or width > 2*min_diam*text_height_percentage) and font_size_modifier > 2:
             font_size_modifier -= 1
+            #print(font_size_modifier, text_bbox)
             text.set_font_size(font_size_modifier)
             text_bbox = text.get_bbox()
             width, height = text_bbox[2]-text_bbox[0], text_bbox[3]-text_bbox[1]
             
-        if not self.vertical_text: text_y *= 1.3 # WARNING Manual offset, check result
+        if not self.vertical_text: text_y *= 1.2 # WARNING Manual offset, check result
             
         text.offset[1] = - text_y - int(height/2)
         if not self.vertical_text:
-            text.offset[0] -= int(height/2)
+            text.offset[0] -= int(height/1.8)
             text.rotate_origin = int(width/2), (text_y+int(height/2))
         text.draw(self.d)
         
@@ -309,11 +310,11 @@ def main():
     with open("cache/project_list.json", "r", encoding="utf-8") as f:
         project_data = {project["id"]: project for project in json.load(f)["project_list"]}
     
-    pool = ProcessPoolExecutor(max_workers=4)
+    pool = ProcessPoolExecutor(max_workers=24)
     futures = list()
     for file in files:
         project = project_data[Path(file).name.split("_")[0]]
-        futures.append(pool.submit(draw_worker, file, project, bases[project["type"]]))
+        futures.append(pool.submit(draw_worker, file, project, bases[project["type"]], vertical_text=False))#, stroke_width=3))
 
     progress_bar = tqdm(total=len(futures), desc="Dessin des fusées")
     progress_bar.set_postfix({"errors": len(errors)})
@@ -350,4 +351,6 @@ def test(file):
         raise result[0]
 
 if __name__ == '__main__':
+    #test("cache/600_stabtrajteamroquette_v3-4.1.a.xlsx")
+    #test("cache/614_Qulbutoké-StabTraj.xlsx")
     main()

@@ -6,7 +6,7 @@ from pathlib import Path
 mm_per_pix = 2.8346
 margin_mm = 0.4
 
-viewbox_regex = re.compile(r'viewBox="(\d+?\.?\d*?) (\d+?\.?\d*?) (\d+?\.?\d*?) (\d+?\.?\d*?)"')
+viewbox_regex = re.compile(r'viewBox="(-?\d+?\.?\d*?) (-?\d+?\.?\d*?) (-?\d+?\.?\d*?) (-?\d+?\.?\d*?)"')
 scale_regex = re.compile(r'scale\((\d+\.?\d*) (\d+\.?\d*)\)')
 edit_regex = re.compile(r'(<svg.*?)>')
 margin_px = margin_mm*mm_per_pix
@@ -43,6 +43,7 @@ def apply_svg(base_data, rocket_path, output_path):
     new_dims = orig_dims[0]*mm_per_pix/inverse_scale, orig_dims[1]*mm_per_pix/inverse_scale
     
     scale = (mm_per_pix**2)/(inverse_scale)
+    set_svg_size(rocket_path)
     rocket = svgutils.compose.SVG(rocket_path)
     rocket.rotate(90, 0,0)
     
@@ -71,7 +72,8 @@ def apply_svg(base_data, rocket_path, output_path):
 
 def set_svg_size(path):
     with open(path, "r") as f:
-        svg_data = f.read()
+        svg_data = f.read().replace("\n", "")
+    if "width=" in svg_data: return
     svg_viewbox = re.findall(viewbox_regex, svg_data)[0]
     svg_viewbox = [float(coord) for coord in svg_viewbox]
     svg_data = re.sub(edit_regex, f'\g<1> width="{svg_viewbox[2]-svg_viewbox[0]}" height="{svg_viewbox[3]-svg_viewbox[1]}">', svg_data)    
@@ -116,7 +118,7 @@ def merge_platters(cards, platter_dims, output_dir, prefix=""):
     platter = svgutils.compose.Figure(*(dim*mm_per_pix for dim in platter_dims), *svg_elements)
     platter.save(Path(output_dir)/f"{prefix}_{platter_number}.svg")
  
-def main():
+def make_cards():
     import glob, json, os
     from pathlib import Path
     os.makedirs("output_cards", exist_ok=True)
@@ -127,13 +129,18 @@ def main():
     with open("config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
     base_data = config["bases"]
-    minif_copies, fusex_copies = config["minif_copies"], config["fusex_copies"]
         
     for rocket in glob.glob("output_rockets/*.svg"):
         rocket_type = project_types[Path(rocket).name.split("_")[0]]
         rocket_base_data = base_data[rocket_type]
         apply_svg(rocket_base_data, rocket, rocket.replace("output_rockets","output_cards").replace(".svg", f"_{rocket_type}.svg"))
     
+def make_platters():
+    import glob, json
+    
+    with open("config.json", "r", encoding="utf-8") as f:
+        config = json.load(f)
+    minif_copies, fusex_copies = config["minif_copies"], config["fusex_copies"]
     platter_dims = (601, 301)
     list_minif = [card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("minif.svg")]*minif_copies
     list_fusex = [card_path for card_path in glob.glob("output_cards/*.svg") if card_path.endswith("fusex.svg")]*fusex_copies
@@ -144,4 +151,5 @@ def main():
     print(f"Plateau(x) nécéssaires: {len(glob.glob('output_platters/*.svg'))}")
 
 if __name__ == "__main__":
-    main()
+    make_cards()
+    make_platters()
