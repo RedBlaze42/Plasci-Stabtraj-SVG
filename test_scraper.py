@@ -91,7 +91,10 @@ def test_message_extraction():
         print(f"  - General messages: {len(general_messages)}")
         print(f"  - Note messages: {len(note_messages)}")
         
+        # Assertions to verify extraction worked correctly
         assert len(rce3_messages) >= 2, "Should extract at least 2 RCE3 messages"
+        assert len(general_messages) >= 1, "Should extract at least 1 general message"
+        assert len(note_messages) >= 1, "Should extract at least 1 note message"
         assert len(messages) > 0, "Should extract at least some messages"
         
         # Test metadata extraction
