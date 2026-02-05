@@ -1,0 +1,12 @@
+{
+    "api_key": "YOUR_SCAE_API_KEY",
+    "cookies": "PHPSESSID=YOUR_SESSION_ID",
+    "filters": {
+        "launch_year": 2022,
+        "types": ["minif", "fusex"],
+        "status": "wip"
+    },
+    "output_dir": "messages",
+    "html_cache_dir": "cache/html",
+    "use_cache": true
+}

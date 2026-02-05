@@ -1,5 +1,6 @@
 output*
 cache
+messages
 *.xlsx
 *.xls
 *.ods
@@ -14,5 +15,6 @@ errors
 tests
 
 !config_example.json
+!config_messages_example.json
 !base_minif.svg
 !base_fusex.svg
