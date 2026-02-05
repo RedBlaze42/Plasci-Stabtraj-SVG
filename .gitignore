@@ -18,3 +18,5 @@ tests
 !config_messages_example.json
 !base_minif.svg
 !base_fusex.svg
+!test_scraper.py
+!demo_scraper.py
